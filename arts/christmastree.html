@@ -27,6 +27,17 @@
             z-index: 1;
         }
 
+        #canvas-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #glSnowCanvas { z-index: 0; }
+        #treeCanvas { z-index: 1; }
+
         #ui-layer {
             position: absolute;
             top: 0;
@@ -175,6 +186,7 @@
 <body>
 
     <div id="canvas-container">
+        <canvas id="glSnowCanvas"></canvas>
         <canvas id="treeCanvas"></canvas>
     </div>
 
@@ -192,6 +204,7 @@
             <button id="btn-draw">Sign / Draw</button>
             <button id="btn-clear">Clear Signs</button>
             <button id="btn-theme">Theme: Classic</button>
+            <button id="btn-save">Save Image</button>
             
             <div class="palette">
                 <div class="color-opt selected" style="background: #00ffff;" data-color="#00ffff"></div>
@@ -209,8 +222,12 @@
  */
 
 const canvas = document.getElementById('treeCanvas');
-const ctx = canvas.getContext('2d');
+const snowCanvas = document.getElementById('glSnowCanvas');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 let width, height;
+let renderScale = 1;
+let lastFrameMs = performance.now();
+const FRAME_BUDGET = 1000 / 75; // cap to ~75fps to ease CPU
 
 // State
 let time = 0;
@@ -235,11 +252,16 @@ const interaction = {
 const ornaments = [];
 const gifts = [];
 const treeLights = [];
+const treeSnow = [];
 
 // Configuration
 const TREE_HEIGHT = 600;
 const TREE_BASE_RADIUS = 250;
 const SPIRAL_LOOPS = 8;
+const GARLAND_POINTS_PER_LOOP = 48; // Reduced and cached for perf
+const snowGL = snowCanvas.getContext('webgl2', { antialias: true, alpha: true, premultipliedAlpha: true });
+const hasGpuSnow = !!snowGL;
+let snowRenderer = null;
 const COLOR_GOLD = '#d4af37';
 const THEMES = [
     {
@@ -281,16 +303,63 @@ let garlandHueRange = currentTheme.garlandHueRange;
 let backgroundGradient = { inner: currentTheme.background[0], outer: currentTheme.background[1] };
 let ribbonColor = currentTheme.ribbonColor || COLOR_GOLD;
 let themeButtonEl = null;
+let spiralCache = [];
+let backgroundFill = null;
 
 // Resize Handler
 function resize() {
     width = window.innerWidth;
     height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
+    const deviceScale = window.devicePixelRatio || 1;
+    renderScale = Math.min(1.5, Math.max(1, deviceScale * 0.85)); // cap pixel density to ease fill cost
+
+    canvas.width = Math.floor(width * renderScale);
+    canvas.height = Math.floor(height * renderScale);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    if (ctx.setTransform) {
+        ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    }
+
+    if (snowCanvas) {
+        snowCanvas.width = Math.floor(width * renderScale);
+        snowCanvas.height = Math.floor(height * renderScale);
+        snowCanvas.style.width = `${width}px`;
+        snowCanvas.style.height = `${height}px`;
+        if (snowRenderer) snowRenderer.resize();
+    }
+
+    buildSpiralCache();
+    rebuildBackground();
 }
 window.addEventListener('resize', resize);
 resize();
+
+function buildSpiralCache() {
+    const totalPoints = SPIRAL_LOOPS * GARLAND_POINTS_PER_LOOP;
+    spiralCache = [];
+    for (let i = 0; i <= totalPoints; i++) {
+        const t = i / totalPoints;
+        const y = (t - 0.5) * TREE_HEIGHT;
+        const radius = t * TREE_BASE_RADIUS;
+        const angle = t * Math.PI * 2 * SPIRAL_LOOPS;
+        spiralCache.push({
+            t,
+            y,
+            radius,
+            cos: Math.cos(angle),
+            sin: Math.sin(angle)
+        });
+    }
+}
+
+function rebuildBackground() {
+    if (!ctx) return;
+    const grad = ctx.createRadialGradient(width / 2, height / 2, 100, width / 2, height / 2, width);
+    grad.addColorStop(0, backgroundGradient.inner);
+    grad.addColorStop(1, backgroundGradient.outer);
+    backgroundFill = grad;
+}
 
 // --- 3D UTILS ---
 
@@ -366,6 +435,7 @@ function applyTheme(theme) {
     if (themeButtonEl) {
         themeButtonEl.textContent = `Theme: ${theme.name}`;
     }
+    rebuildBackground();
 }
 
 
@@ -373,22 +443,19 @@ function applyTheme(theme) {
 
 function getTreeSpiralPoint(t) {
     // t goes from 0 (top) to 1 (bottom)
-    const y = (t - 0.5) * TREE_HEIGHT;
-    const radius = t * TREE_BASE_RADIUS;
-    const angle = t * Math.PI * 2 * SPIRAL_LOOPS;
-    
-    // Add some "signature" style waviness
-    const wave = Math.sin(t * 20 + time * 0.002) * 10;
-    
-    const x = Math.cos(angle) * (radius + wave);
-    const z = Math.sin(angle) * (radius + wave);
-    
-    return { x, y, z, t };
+    const idx = Math.min(spiralCache.length - 1, Math.floor(t * (spiralCache.length - 1)));
+    const base = spiralCache[idx] || { t, y: (t - 0.5) * TREE_HEIGHT, radius: t * TREE_BASE_RADIUS, cos: Math.cos(t * Math.PI * 2 * SPIRAL_LOOPS), sin: Math.sin(t * Math.PI * 2 * SPIRAL_LOOPS) };
+    // Add some waviness while keeping heavy trig precomputed
+    const wave = Math.sin(base.t * 20 + time * 0.002) * 10;
+    const radius = base.radius + wave;
+    const x = base.cos * radius;
+    const z = base.sin * radius;
+    return { x, y: base.y, z, t: base.t };
 }
 
 // Initialize ambient sparkles (snow particles)
 const particles = [];
-for(let i=0; i<300; i++) { // Increased snowflakes
+for(let i=0; i<240; i++) { // CPU fallback snow; reduced because GPU layer handles main snow
     particles.push({
         x: (Math.random() - 0.5) * width * 2, // Wider spread
         y: (Math.random() - 0.5) * height * 2, // Taller spread
@@ -398,6 +465,110 @@ for(let i=0; i<300; i++) { // Increased snowflakes
         life: Math.random()
     });
 }
+
+function createSnowRenderer(gl) {
+    if (!gl) return null;
+    const snowCount = 720;
+    const vertSrc = `#version 300 es
+        precision mediump float;
+        layout(location = 0) in vec3 aPosition;
+        layout(location = 1) in float aSpeed;
+        uniform vec2 uResolution;
+        uniform float uTime;
+        out float vDepth;
+        void main() {
+            float y = mod(aPosition.y + uTime * aSpeed, uResolution.y * 2.0) - uResolution.y;
+            float z = aPosition.z;
+            float depth = clamp(1.0 - (z + 800.0) / 1600.0, 0.25, 1.0);
+            vec2 pos = vec2(aPosition.x, y);
+            vec2 ndc = vec2(pos.x / uResolution.x, pos.y / uResolution.y);
+            ndc *= vec2(1.0, -1.0);
+            gl_Position = vec4(ndc, 0.0, 1.0);
+            gl_PointSize = 2.5 + depth * 3.5;
+            vDepth = depth;
+        }
+    `;
+    const fragSrc = `#version 300 es
+        precision mediump float;
+        in float vDepth;
+        out vec4 outColor;
+        void main() {
+            vec2 uv = gl_PointCoord - vec2(0.5);
+            float d = length(uv);
+            float alpha = smoothstep(0.35, 0.0, d) * vDepth;
+            outColor = vec4(vec3(1.0), alpha);
+        }
+    `;
+
+    const compile = (type, src) => {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.warn(gl.getShaderInfoLog(shader));
+            return null;
+        }
+        return shader;
+    };
+    const vs = compile(gl.VERTEX_SHADER, vertSrc);
+    const fs = compile(gl.FRAGMENT_SHADER, fragSrc);
+    if (!vs || !fs) return null;
+
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.warn(gl.getProgramInfoLog(program));
+        return null;
+    }
+
+    const data = new Float32Array(snowCount * 4); // x,y,z,speed
+    for (let i = 0; i < snowCount; i++) {
+        const base = i * 4;
+        data[base] = (Math.random() - 0.5) * width * 2;
+        data[base + 1] = (Math.random() - 0.5) * height * 2;
+        data[base + 2] = (Math.random() - 0.5) * 800;
+        data[base + 3] = 15 + Math.random() * 25;
+    }
+
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 16, 12);
+
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    const uResolution = gl.getUniformLocation(program, 'uResolution');
+    const uTime = gl.getUniformLocation(program, 'uTime');
+
+    function resizeSnow() {
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    }
+
+    function renderSnow(nowMs) {
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(program);
+        gl.uniform2f(uResolution, width, height);
+        gl.uniform1f(uTime, nowMs * 0.001);
+        gl.drawArrays(gl.POINTS, 0, snowCount);
+    }
+
+    return { render: renderSnow, resize: resizeSnow };
+}
+
+if (hasGpuSnow) {
+    snowRenderer = createSnowRenderer(snowGL);
+    if (snowRenderer) snowRenderer.resize();
+}
+
 
 // Initialize Gifts
 function initGifts() {
@@ -440,6 +611,25 @@ function initTreeLights() {
 }
 initTreeLights();
 
+function initTreeSnow() {
+    const flakeCount = 160;
+    for (let i = 0; i < flakeCount; i++) {
+        const t = Math.random();
+        const angle = Math.random() * Math.PI * 2;
+        const baseRadius = t * TREE_BASE_RADIUS * (0.8 + Math.random() * 0.15);
+        const y = (t - 0.5) * TREE_HEIGHT;
+        treeSnow.push({
+            t,
+            angle,
+            radius: baseRadius,
+            y,
+            speed: 0.2 + Math.random() * 0.5,
+            size: 1.5 + Math.random() * 1.8,
+        });
+    }
+}
+initTreeSnow();
+
 // Initialize Candies (e.g., Candy Canes)
 // Candies removed
 
@@ -474,6 +664,7 @@ const btnRotate = document.getElementById('btn-rotate');
 const btnDraw = document.getElementById('btn-draw');
 const btnClear = document.getElementById('btn-clear');
 const btnTheme = document.getElementById('btn-theme');
+const btnSave = document.getElementById('btn-save');
 themeButtonEl = btnTheme;
 
 btnRotate.addEventListener('click', () => setMode('view'));
@@ -485,6 +676,7 @@ btnTheme.addEventListener('click', () => {
     currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
     applyTheme(THEMES[currentThemeIndex]);
 });
+btnSave.addEventListener('click', saveSnapshot);
 
 // Color Picker Logic
 document.querySelectorAll('.color-opt').forEach(el => {
@@ -510,6 +702,51 @@ function setMode(mode) {
         statusText.innerText = "Draw to sign the tree in 3D space";
         scene.autoRotate = false;
     }
+}
+
+function addDrawPoint(x, y) {
+    const last = interaction.drawingPoints[interaction.drawingPoints.length - 1];
+    if (last) {
+        const dx = x - last.x;
+        const dy = y - last.y;
+        if ((dx*dx + dy*dy) < 2.5 * 2.5) return; // skip tiny movements to cut noise/latency
+    }
+    interaction.drawingPoints.push({
+        x,
+        y,
+        rY: scene.rotationY,
+        cosR: Math.cos(scene.rotationY),
+        sinR: Math.sin(scene.rotationY),
+        color: interaction.currentColor
+    });
+}
+
+function simplifyPoints(points, minDist = 2.5) {
+    if (points.length < 3) return points;
+    const keep = [points[0]];
+    let last = points[0];
+    const minDistSq = minDist * minDist;
+    for (let i = 1; i < points.length - 1; i++) {
+        const p = points[i];
+        const dx = p.x - last.x;
+        const dy = p.y - last.y;
+        if (dx*dx + dy*dy >= minDistSq) {
+            keep.push(p);
+            last = p;
+        }
+    }
+    keep.push(points[points.length - 1]);
+    return keep;
+}
+
+function ensureSignatureAngles(sig) {
+    if (sig.length === 0 || sig[0].cosR !== undefined) return sig;
+    for (let i = 0; i < sig.length; i++) {
+        const p = sig[i];
+        p.cosR = Math.cos(p.rY);
+        p.sinR = Math.sin(p.rY);
+    }
+    return sig;
 }
 
 // Mouse Events
@@ -540,13 +777,7 @@ canvas.addEventListener('mousemove', (e) => {
     } else if (interaction.mode === 'draw') {
         const mouseX = e.clientX - width/2;
         const mouseY = e.clientY - height/2;
-        
-        interaction.drawingPoints.push({
-            x: mouseX,
-            y: mouseY,
-            rY: scene.rotationY,
-            color: interaction.currentColor
-        });
+        addDrawPoint(mouseX, mouseY);
     }
 
     interaction.lastX = e.clientX;
@@ -558,7 +789,7 @@ canvas.addEventListener('mouseup', (e) => {
     
     if (interaction.mode === 'draw') {
         if (interaction.drawingPoints.length > 2) {
-            interaction.signatures.push([...interaction.drawingPoints]);
+            interaction.signatures.push(simplifyPoints([...interaction.drawingPoints]));
         }
         interaction.drawingPoints = [];
     } else if (interaction.mode === 'view') {
@@ -596,7 +827,7 @@ canvas.addEventListener('touchmove', (e) => {
     } else {
          const mouseX = touch.clientX - width/2;
          const mouseY = touch.clientY - height/2;
-         interaction.drawingPoints.push({ x: mouseX, y: mouseY, rY: scene.rotationY, color: interaction.currentColor });
+         addDrawPoint(mouseX, mouseY);
     }
     interaction.lastX = touch.clientX;
     interaction.lastY = touch.clientY;
@@ -605,7 +836,7 @@ canvas.addEventListener('touchmove', (e) => {
 canvas.addEventListener('touchend', () => {
     interaction.isDragging = false;
     if (interaction.mode === 'draw' && interaction.drawingPoints.length > 2) {
-        interaction.signatures.push([...interaction.drawingPoints]);
+        interaction.signatures.push(simplifyPoints([...interaction.drawingPoints]));
         interaction.drawingPoints = [];
     }
 });
@@ -616,6 +847,23 @@ canvas.addEventListener('wheel', (e) => {
     scene.zoom = Math.min(2.2, Math.max(0.6, scene.zoom * factor));
     scene.autoRotate = false;
 }, { passive: false });
+
+function saveSnapshot() {
+    const out = document.createElement('canvas');
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const octx = out.getContext('2d');
+    // Tree (includes background)
+    octx.drawImage(canvas, 0, 0);
+    // Overlay snow if available
+    if (snowCanvas) {
+        octx.drawImage(snowCanvas, 0, 0, snowCanvas.width, snowCanvas.height, 0, 0, out.width, out.height);
+    }
+    const link = document.createElement('a');
+    link.download = 'christmas-tree.png';
+    link.href = out.toDataURL('image/png');
+    link.click();
+}
 
 
 function addOrnament(screenX, screenY) {
@@ -904,44 +1152,56 @@ function drawTreeLight(light) {
 
 // Candy canes removed
 
-function render() {
+function render(now = performance.now()) {
+    const delta = now - lastFrameMs;
+    if (delta < FRAME_BUDGET) {
+        requestAnimationFrame(render);
+        return;
+    }
+    lastFrameMs = now;
+
+    if (snowRenderer) {
+        snowRenderer.render(now);
+    }
+
     ctx.clearRect(0, 0, width, height);
     
-    const gradient = ctx.createRadialGradient(width/2, height/2, 100, width/2, height/2, width);
-    gradient.addColorStop(0, backgroundGradient.inner);
-    gradient.addColorStop(1, backgroundGradient.outer);
-    ctx.fillStyle = gradient;
+    if (!backgroundFill) rebuildBackground();
+    ctx.fillStyle = backgroundFill;
     ctx.fillRect(0, 0, width, height);
 
-    time++;
+    const deltaNorm = delta / 16.67; // normalize to 60fps step
+    time += delta * 0.06; // normalize animation speed to ~60fps baseline
     if(scene.autoRotate) {
-        scene.rotationY += 0.005;
+        scene.rotationY += 0.005 * deltaNorm;
     } else {
-        scene.rotationY += (scene.targetRotationY - scene.rotationY) * 0.1;
+        scene.rotationY += (scene.targetRotationY - scene.rotationY) * 0.1 * Math.min(1, deltaNorm);
     }
     
-    particles.forEach(p => {
-        p.y += p.speed;
-        // If particle goes off bottom, reset it to the top with a new random Z
-        if(p.y > height/2) {
-            p.y = -height/2;
-            p.x = (Math.random() - 0.5) * width * 2; // New random X
-            p.z = (Math.random() - 0.5) * 1000; // New random Z depth
-        }
-        
-        // Apply full 3D transformation to particles
-        let t = transform3D(p.x, p.y, p.z);
-        let proj = project3D(t.x, t.y, t.z); 
-        
-        if (proj.visible) {
-            // Scale opacity and size by depth
-            const opacity = Math.abs(Math.sin(time * 0.05 + p.life)) * proj.scale;
-            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-            ctx.beginPath();
-            ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI*2);
-            ctx.fill();
-        }
-    });
+    if (!snowRenderer) {
+        particles.forEach(p => {
+            p.y += p.speed;
+            // If particle goes off bottom, reset it to the top with a new random Z
+            if(p.y > height/2) {
+                p.y = -height/2;
+                p.x = (Math.random() - 0.5) * width * 2; // New random X
+                p.z = (Math.random() - 0.5) * 1000; // New random Z depth
+            }
+            
+            // Apply full 3D transformation to particles
+            let t = transform3D(p.x, p.y, p.z);
+            let proj = project3D(t.x, t.y, t.z); 
+            
+            if (proj.visible) {
+                // Scale opacity and size by depth
+                const opacity = Math.abs(Math.sin(time * 0.05 + p.life)) * proj.scale;
+                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI*2);
+                ctx.fill();
+            }
+        });
+    }
 
     // Sort gifts by their (transformed) Z-coordinate
     const sortedGifts = gifts.map(g => {
@@ -954,7 +1214,7 @@ function render() {
     });
 
     const strands = 3;
-    const pointsPerLoop = 60;
+    const pointsPerLoop = GARLAND_POINTS_PER_LOOP;
     const totalPoints = SPIRAL_LOOPS * pointsPerLoop;
     
     let prevPoints = [];
@@ -985,6 +1245,26 @@ function render() {
     
     // Draw Tree Lights
     treeLights.forEach(l => drawTreeLight(l));
+    
+    treeSnow.forEach(flake => {
+        flake.y += flake.speed * deltaNorm * 8;
+        if (flake.y > TREE_HEIGHT / 2) {
+            flake.y = -TREE_HEIGHT / 2 - Math.random() * 40;
+            flake.angle = Math.random() * Math.PI * 2;
+            flake.radius = flake.t * TREE_BASE_RADIUS * (0.8 + Math.random() * 0.15);
+        }
+        const x = Math.cos(flake.angle) * flake.radius;
+        const z = Math.sin(flake.angle) * flake.radius;
+        const tr = transform3D(x, flake.y, z);
+        const proj = project3D(tr.x, tr.y, tr.z);
+        if (proj.visible) {
+            const size = flake.size * proj.scale;
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
     
     ornaments.forEach(o => {
         const tr = transform3D(o.x, o.y, o.z);
@@ -1037,19 +1317,13 @@ function render() {
 
     allSignatures.forEach(sig => {
         if(sig.length < 2) return;
+        const sigPts = ensureSignatureAngles(sig);
         
         ctx.beginPath();
-        for(let i=0; i<sig.length; i++) {
-            const pt = sig[i];
+        for(let i=0; i<sigPts.length; i++) {
+            const pt = sigPts[i];
             
-            const radiusAtY = ((pt.y / TREE_HEIGHT) + 0.5) * TREE_BASE_RADIUS;
-            const r = Math.max(10, radiusAtY); 
-            
-            const angleDiff = scene.rotationY - pt.rY;
-            const x_raw = pt.x; 
-            const z_raw = r; 
-            
-            const worldBase = rotateY_only(x_raw, z_raw, -pt.rY);
+            const worldBase = rotateY_only(pt.x, 0, -pt.rY); // plane through tree axis aligned with draw angle
             
             const tr = transform3D(worldBase.x, pt.y, worldBase.z);
             const proj = project3D(tr.x, tr.y, tr.z);
@@ -1063,7 +1337,7 @@ function render() {
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.shadowBlur = 10;
-        ctx.shadowColor = sig[0].color || '#fff';
+        ctx.shadowColor = sigPts[0].color || '#fff';
         ctx.stroke();
         ctx.shadowBlur = 4;
         ctx.lineWidth = 4;
