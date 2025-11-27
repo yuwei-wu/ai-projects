@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Projects | Yuwei Wu</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --accent: #4ab3ff;
+      --muted: #8b949e;
+      --text: #e6edf3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(74, 179, 255, 0.12), transparent 28%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0.4px;
+    }
+    header p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    nav {
+      display: flex;
+      gap: 14px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    nav a {
+      color: var(--text);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      transition: border-color 120ms ease, transform 120ms ease;
+    }
+    nav a:hover {
+      border-color: rgba(74, 179, 255, 0.7);
+      transform: translateY(-1px);
+    }
+    section {
+      margin-top: 32px;
+    }
+    .section-title {
+      margin: 0 0 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      display: block;
+      padding: 18px;
+      border-radius: 12px;
+      background: linear-gradient(160deg, var(--card), #111620);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: inherit;
+      text-decoration: none;
+      transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(74, 179, 255, 0.45);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+    }
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      color: #f2f4f8;
+    }
+    .card p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .card .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .card .cta::after {
+      content: "→";
+      font-size: 12px;
+    }
+    @media (max-width: 640px) {
+      header h1 { font-size: 24px; }
+      .page { padding: 22px 14px 48px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>AI Projects</h1>
+      <p>Playable demos and interactive sketches built for fun and exploration.</p>
+    </header>
+
+    <section id="tools">
+      <h2 class="section-title">Tools</h2>
+      <div class="grid">
+        <a class="card" href="tools/typewritter.html">
+          <h2>Typewriter Trainer</h2>
+          <p>Practice typing on a vintage-inspired machine with ribbon colors, finishes, and tactile sounds.</p>
+          <span class="cta">Launch demo</span>
+        </a>
+        <a class="card" href="tools/academic.html">
+          <h2>Academic Suite</h2>
+          <p>Equation editor and text cleanup utilities tailored for academic writing workflows.</p>
+          <span class="cta">Launch demo</span>
+        </a>
+      </div>
+    </section>
+
+    <section id="arts">
+      <h2 class="section-title">Arts</h2>
+      <div class="grid">
+        <a class="card" href="arts/christmastree.html">
+          <h2>Christmas Tree</h2>
+          <p>Create a festive Christmas tree with customizable decorations, lights, and ornaments.</p>
+          <span class="cta">Launch demo</span>
+        </a>
+
+        <a class="card" href="arts/landscape.html">
+          <h2>Jade Landscape</h2>
+          <p>Generate layered ink-style mountains with weather toggles and seasonal washes.</p>
+          <span class="cta">Launch demo</span>
+        </a>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

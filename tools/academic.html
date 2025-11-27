@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Writing</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- KaTeX for rendering math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" xintegrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" xintegrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0; /* Slate 200 */
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+        
+        .katex-display {
+            margin: 0 !important;
+        }
+        textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+        .preview-box {
+            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        header .flex.items-center.justify-between {
+            gap: 0.5rem;
+        }
+        @media (max-width: 640px) {
+            header .flex.items-center.justify-between {
+                flex-direction: column;
+                align-items: flex-start;
+                height: auto;
+                gap: 0.75rem;
+            }
+            header .flex.bg-slate-800 {
+                width: 100%;
+                justify-content: space-between;
+            }
+            main { padding: 1rem !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // ==========================================
+        // DATA: LaTeX Symbols
+        // ==========================================
+        const symbolData = [
+            // Greek Letters
+            { id: 'alpha', command: '\\alpha', category: 'Greek', keywords: ['a', 'lower'] },
+            { id: 'beta', command: '\\beta', category: 'Greek', keywords: ['b', 'lower'] },
+            { id: 'gamma', command: '\\gamma', category: 'Greek', keywords: ['g', 'lower'] },
+            { id: 'delta', command: '\\delta', category: 'Greek', keywords: ['d', 'change', 'lower'] },
+            { id: 'epsilon', command: '\\epsilon', category: 'Greek', keywords: ['e', 'lower'] },
+            { id: 'varepsilon', command: '\\varepsilon', category: 'Greek', keywords: ['e', 'variant', 'lower'] },
+            { id: 'theta', command: '\\theta', category: 'Greek', keywords: ['th', 'angle', 'lower'] },
+            { id: 'lambda', command: '\\lambda', category: 'Greek', keywords: ['l', 'lower'] },
+            { id: 'mu', command: '\\mu', category: 'Greek', keywords: ['m', 'micro', 'lower'] },
+            { id: 'pi', command: '\\pi', category: 'Greek', keywords: ['p', 'circle', 'lower'] },
+            { id: 'sigma', command: '\\sigma', category: 'Greek', keywords: ['s', 'sum', 'lower'] },
+            { id: 'phi', command: '\\phi', category: 'Greek', keywords: ['f', 'golden', 'lower'] },
+            { id: 'psi', command: '\\psi', category: 'Greek', keywords: ['ps', 'wave', 'lower'] },
+            { id: 'omega', command: '\\omega', category: 'Greek', keywords: ['o', 'w', 'lower'] },
+            { id: 'Gamma', command: '\\Gamma', category: 'Greek', keywords: ['G', 'upper'] },
+            { id: 'Delta', command: '\\Delta', category: 'Greek', keywords: ['D', 'upper', 'change'] },
+            { id: 'Theta', command: '\\Theta', category: 'Greek', keywords: ['TH', 'upper'] },
+            { id: 'Lambda', command: '\\Lambda', category: 'Greek', keywords: ['L', 'upper'] },
+            { id: 'Pi', command: '\\Pi', category: 'Greek', keywords: ['P', 'product', 'upper'] },
+            { id: 'Sigma', command: '\\Sigma', category: 'Greek', keywords: ['S', 'summation', 'upper'] },
+            { id: 'Phi', command: '\\Phi', category: 'Greek', keywords: ['F', 'upper'] },
+            { id: 'Omega', command: '\\Omega', category: 'Greek', keywords: ['O', 'ohms', 'upper'] },
+
+            // Operators & Big Ops
+            { id: 'times', command: '\\times', category: 'Operators', keywords: ['multiply', 'cross', 'x'] },
+            { id: 'cdot', command: '\\cdot', category: 'Operators', keywords: ['dot', 'multiply'] },
+            { id: 'div', command: '\\div', category: 'Operators', keywords: ['divide', 'division'] },
+            { id: 'pm', command: '\\pm', category: 'Operators', keywords: ['plus', 'minus'] },
+            { id: 'sum', command: '\\sum', category: 'Operators', keywords: ['summation', 'add'] },
+            { id: 'prod', command: '\\prod', category: 'Operators', keywords: ['product', 'pi'] },
+            { id: 'int', command: '\\int', category: 'Operators', keywords: ['integral', 'calculus'] },
+            { id: 'oint', command: '\\oint', category: 'Operators', keywords: ['contour', 'integral'] },
+            { id: 'frac', command: '\\frac{a}{b}', copy: '\\frac{}{}', category: 'Operators', keywords: ['fraction', 'division'] },
+            { id: 'sqrt', command: '\\sqrt{x}', copy: '\\sqrt{}', category: 'Operators', keywords: ['square', 'root'] },
+            { id: 'lim', command: '\\lim_{x \\to 0}', copy: '\\lim_{ \\to }', category: 'Operators', keywords: ['limit'] },
+
+            // Relations
+            { id: 'leq', command: '\\leq', category: 'Relations', keywords: ['less', 'equal'] },
+            { id: 'geq', command: '\\geq', category: 'Relations', keywords: ['greater', 'equal'] },
+            { id: 'neq', command: '\\neq', category: 'Relations', keywords: ['not', 'equal'] },
+            { id: 'approx', command: '\\approx', category: 'Relations', keywords: ['approximate'] },
+            { id: 'equiv', command: '\\equiv', category: 'Relations', keywords: ['equivalent'] },
+            { id: 'sim', command: '\\sim', category: 'Relations', keywords: ['similar'] },
+            { id: 'subset', command: '\\subset', category: 'Relations', keywords: ['set', 'contained'] },
+            { id: 'in', command: '\\in', category: 'Relations', keywords: ['element', 'set'] },
+            { id: 'notin', command: '\\notin', category: 'Relations', keywords: ['not', 'element'] },
+
+            // Arrows
+            { id: 'leftarrow', command: '\\leftarrow', category: 'Arrows', keywords: ['left'] },
+            { id: 'rightarrow', command: '\\rightarrow', category: 'Arrows', keywords: ['right', 'to', 'implies'] },
+            { id: 'leftrightarrow', command: '\\leftrightarrow', category: 'Arrows', keywords: ['both'] },
+            { id: 'Rightarrow', command: '\\Rightarrow', category: 'Arrows', keywords: ['double', 'right', 'implies'] },
+            { id: 'Leftrightarrow', command: '\\Leftrightarrow', category: 'Arrows', keywords: ['double', 'iff'] },
+            { id: 'mapsto', command: '\\mapsto', category: 'Arrows', keywords: ['maps', 'function'] },
+
+            // Logic & Misc
+            { id: 'forall', command: '\\forall', category: 'Logic', keywords: ['all', 'every', 'universal'] },
+            { id: 'exists', command: '\\exists', category: 'Logic', keywords: ['existential'] },
+            { id: 'infty', command: '\\infty', category: 'Misc', keywords: ['infinity'] },
+            { id: 'partial', command: '\\partial', category: 'Misc', keywords: ['derivative'] },
+            { id: 'nabla', command: '\\nabla', category: 'Misc', keywords: ['del', 'gradient'] },
+            { id: 'angle', command: '\\angle', category: 'Misc', keywords: ['geometry'] },
+            { id: 'therefore', command: '\\therefore', category: 'Logic', keywords: ['conclusion'] },
+            { id: 'emptyset', command: '\\emptyset', category: 'Logic', keywords: ['null', 'set'] },
+            
+            // Accents
+            { id: 'hat', command: '\\hat{a}', copy: '\\hat{}', category: 'Accents', keywords: ['unit', 'vector'] },
+            { id: 'bar', command: '\\bar{a}', copy: '\\bar{}', category: 'Accents', keywords: ['mean', 'average'] },
+            { id: 'vec', command: '\\vec{a}', copy: '\\vec{}', category: 'Accents', keywords: ['vector'] },
+            { id: 'dot', command: '\\dot{a}', copy: '\\dot{}', category: 'Accents', keywords: ['derivative'] },
+            
+            // Delimiters
+            { id: 'lb', command: '\\{', category: 'Delimiters', keywords: ['brace', 'curly'] },
+            { id: 'rb', command: '\\}', category: 'Delimiters', keywords: ['brace', 'curly'] },
+            { id: 'langle', command: '\\langle', category: 'Delimiters', keywords: ['angle', 'bracket'] },
+            { id: 'rangle', command: '\\rangle', category: 'Delimiters', keywords: ['angle', 'bracket'] },
+            { id: 'ell', command: '\\ell', category: 'Misc', keywords: ['l', 'cursive'] },
+            { id: 'hbar', command: '\\hbar', category: 'Misc', keywords: ['h', 'physics'] },
+        ];
+
+        // ==========================================
+        // HELPERS
+        // ==========================================
+        const copyToClipboard = (text, callback) => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => callback("Copied to clipboard!"));
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    callback("Copied to clipboard!");
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                    callback("Failed to copy");
+                }
+                document.body.removeChild(textArea);
+            }
+        };
+
+        const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+
+        // ==========================================
+        // COMPONENTS
+        // ==========================================
+
+        const LatexRenderer = ({ latex, className = "" }) => {
+            const containerRef = useRef(null);
+            useEffect(() => {
+                if (containerRef.current && window.katex) {
+                    try {
+                        window.katex.render(latex, containerRef.current, {
+                            throwOnError: false,
+                            displayMode: true, 
+                            output: 'html'
+                        });
+                    } catch (e) {}
+                }
+            }, [latex]);
+            return <div ref={containerRef} className={`text-xl ${className}`} />;
+        };
+
+        const Toast = ({ message }) => (
+            <div className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg transition-all duration-300 z-50 flex items-center gap-2 ${message ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                <span className="font-medium">{message}</span>
+            </div>
+        );
+
+        // --- SUB-APP: Equation Editor ---
+        const EquationEditor = ({ showToast }) => {
+            const [latexInput, setLatexInput] = useState('\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedCategory, setSelectedCategory] = useState('All');
+            const textareaRef = useRef(null);
+
+            const categories = useMemo(() => ['All', ...new Set(symbolData.map(s => s.category))], []);
+            const filteredSymbols = useMemo(() => {
+                const lowerSearch = searchTerm.toLowerCase();
+                return symbolData.filter(symbol => {
+                    if (selectedCategory !== 'All' && symbol.category !== selectedCategory) return false;
+                    if (!lowerSearch) return true;
+                    return symbol.command.toLowerCase().includes(lowerSearch) || 
+                           symbol.keywords.some(k => k.toLowerCase().includes(lowerSearch));
+                });
+            }, [searchTerm, selectedCategory]);
+
+            const handleInsert = (symbolCommand) => {
+                const textarea = textareaRef.current;
+                if (!textarea) return;
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const text = latexInput;
+                const newText = text.substring(0, start) + symbolCommand + text.substring(end);
+                setLatexInput(newText);
+                setTimeout(() => {
+                    textarea.focus();
+                    const newCursorPos = start + symbolCommand.length;
+                    textarea.setSelectionRange(newCursorPos, newCursorPos);
+                }, 0);
+            };
+
+            const templates = [
+                { label: 'Matrix', code: '\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}' },
+                { label: 'Cases', code: '\\begin{cases} x & \\text{if } x > 0 \\\\ -x & \\text{if } x \\leq 0 \\end{cases}' },
+                { label: 'Align', code: '\\begin{align*} a &= b \\\\ c &= d \\end{align*}' }
+            ];
+
+            return (
+                <div className="flex flex-col h-full">
+                    {/* Editor & Preview */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">LaTeX Source</label>
+                            <textarea
+                                ref={textareaRef}
+                                value={latexInput}
+                                onChange={(e) => setLatexInput(e.target.value)}
+                                className="w-full h-40 bg-slate-800 text-slate-100 font-mono text-base p-4 rounded-lg border border-slate-700 resize-none placeholder-slate-500 focus:border-blue-500 transition-colors"
+                                placeholder="Type LaTeX here..."
+                                spellCheck="false"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Preview</label>
+                            <div className="w-full h-40 bg-slate-200 text-slate-900 rounded-lg border border-slate-700 flex items-center justify-center p-4 overflow-auto preview-box">
+                                {latexInput.trim() ? <LatexRenderer latex={latexInput} /> : <span className="text-slate-400 italic">Preview...</span>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex justify-between mb-4 items-center">
+                         <div className="flex gap-2">
+                            {templates.map(t => (
+                                <button 
+                                    key={t.label}
+                                    onClick={() => handleInsert(t.code)}
+                                    className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-xs text-slate-300 rounded border border-slate-600 font-medium"
+                                >
+                                    + {t.label}
+                                </button>
+                            ))}
+                        </div>
+                        <button 
+                            onClick={() => copyToClipboard(latexInput, showToast)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                        >
+                            Copy Source
+                        </button>
+                    </div>
+
+                    {/* Toolbar */}
+                    <div className="bg-slate-800 border-t border-slate-700 flex-1 -mx-4 px-4 pt-4">
+                        <div className="flex flex-col md:flex-row gap-4 mb-4">
+                            <input
+                                type="text"
+                                placeholder="Search symbols..."
+                                className="bg-slate-900 text-white border border-slate-600 rounded-lg py-1.5 px-3 focus:outline-none focus:border-blue-500 text-sm w-full md:w-64"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <div className="flex-1 flex flex-wrap gap-2 items-center">
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedCategory(cat)}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide transition-colors ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Grid */}
+                        <div className="h-[300px] overflow-y-auto pr-2 custom-scrollbar pb-10">
+                            {filteredSymbols.length === 0 ? (
+                                <div className="text-center py-10 text-slate-500">No symbols found.</div>
+                            ) : (
+                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2">
+                                    {filteredSymbols.map((symbol) => (
+                                        <button
+                                            key={symbol.id}
+                                            onClick={() => handleInsert(symbol.copy || symbol.command)}
+                                            className="group flex items-center justify-center bg-slate-700 border border-slate-600 rounded p-2 h-12 hover:bg-slate-600 hover:border-blue-500 transition-all"
+                                            title={symbol.command}
+                                        >
+                                            <LatexRenderer latex={symbol.command} className="text-sm text-slate-200 pointer-events-none" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- SUB-APP: Text Tools ---
+        const TextTools = ({ showToast }) => {
+            const [text, setText] = useState('');
+            const [stats, setStats] = useState({ words: 0, chars: 0, sentences: 0, paragraphs: 0 });
+
+            useEffect(() => {
+                const charCount = text.length;
+                const words = text.trim() === '' ? [] : text.trim().split(/\s+/);
+                const sentences = text.trim() === '' ? [] : text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+                const paragraphs = text.trim() === '' ? [] : text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+                
+                setStats({
+                    words: words.length,
+                    chars: charCount,
+                    sentences: sentences.length,
+                    paragraphs: paragraphs.length
+                });
+            }, [text]);
+
+            // Transform Functions
+            const transform = (type) => {
+                if (!text) return;
+                let newText = text;
+
+                if (type === 'upper') newText = text.toUpperCase();
+                else if (type === 'lower') newText = text.toLowerCase();
+                else if (type === 'sentence') {
+                    newText = text.toLowerCase().replace(/(^\s*\w|[.!?]\s*\w)/g, c => c.toUpperCase());
+                } else if (type === 'title_apa') {
+                    const minorWords = new Set(['a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'from', 'by', 'with', 'in', 'of', 'up', 'out', 'as']);
+                    newText = text.toLowerCase().split(/(\s+)/).map((word, index, arr) => {
+                        if (index === 0 || index === arr.length - 1) return capitalize(word);
+                        if (word.trim() === '') return word;
+                        if (minorWords.has(word.toLowerCase())) {
+                            const prev = index > 1 ? arr[index - 2].trim() : '';
+                            if (prev && (prev.endsWith(':') || prev.endsWith('.') || prev.endsWith('?'))) return capitalize(word);
+                            return word.toLowerCase();
+                        }
+                        return capitalize(word);
+                    }).join('');
+                }
+                setText(newText);
+                showToast(`Applied: ${type.replace('_', ' ')}`);
+            };
+
+            const formalize = () => {
+                if (!text) return;
+                const replacements = {
+                    "can't": "cannot", "won't": "will not", "n't": " not", "'re": " are", 
+                    "'m": " am", "'ll": " will", "'ve": " have", "it's": "it is", "he's": "he is",
+                    "she's": "she is", "that's": "that is", "there's": "there is", "what's": "what is"
+                };
+                let newText = text;
+                for (const [key, val] of Object.entries(replacements)) {
+                    const regex = new RegExp(key, 'gi');
+                    newText = newText.replace(regex, val);
+                }
+                setText(newText);
+                showToast("Expanded contractions");
+            };
+
+            const cleanSpacing = () => {
+                if (!text) return;
+                let newText = text.replace(/[ \t]+/g, ' ').replace(/\s+([.,;!?])/g, '$1').replace(/([.,;!?])(?=[a-zA-Z])/g, '$1 ');
+                setText(newText.trim());
+                showToast("Cleaned whitespace");
+            };
+
+            const fixBrokenLines = () => {
+                if (!text) return;
+                // Merges lines where the first line does NOT end in punctuation.
+                const newText = text.replace(/([^\n.!?])\n(?![ \n\r])/g, '$1 ');
+                setText(newText);
+                showToast("Fixed broken lines (PDF)");
+            }
+
+            const stripCitations = () => {
+                if (!text) return;
+                // Remove [1], [1-5], [1, 2] and (Author, 2000)
+                let newText = text
+                    .replace(/\[\d+(?:,\s*\d+|-\d+)*\]/g, '')
+                    .replace(/\([A-Za-z\s]+,\s*\d{4}\)/g, '')
+                    .replace(/  +/g, ' '); // cleanup extra spaces left behind
+                setText(newText.trim());
+                showToast("Removed citations");
+            }
+
+            const smartDashes = () => {
+                if (!text) return;
+                // 1. Spaced hyphens to em-dash: "word - word" -> "word — word"
+                // 2. Number ranges to en-dash: "1990-2000" -> "1990–2000"
+                let newText = text
+                    .replace(/\s+-\s+/g, ' — ')
+                    .replace(/(\d)\s*-\s*(\d)/g, '$1–$2');
+                setText(newText);
+                showToast("Converted to smart dashes");
+            }
+
+            const sortLines = () => {
+                if (!text) return;
+                const newText = text.split('\n').filter(line => line.trim()).sort((a, b) => a.localeCompare(b)).join('\n');
+                setText(newText);
+                showToast("Sorted lines alphabetically");
+            }
+
+            const escapeLatex = () => {
+                if (!text) return;
+                const escapes = {
+                    '\\': '\\textbackslash ', '&': '\\&', '%': '\\%', '$': '\\$', '#': '\\#',
+                    '_': '\\_', '{': '\\{', '}': '\\}', '~': '\\textasciitilde ', '^': '\\textasciicircum '
+                };
+                let newText = text.replace(/[\\&%\$#_{}~^]/g, match => escapes[match]);
+                setText(newText);
+                showToast("Escaped for LaTeX");
+            };
+
+            return (
+                <div className="flex flex-col h-full gap-4">
+                    <div className="flex flex-col flex-1 relative">
+                        <textarea
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            placeholder="Paste your academic text or abstract here..."
+                            className="flex-1 w-full bg-slate-800 text-slate-100 font-serif text-lg p-4 rounded-lg border border-slate-700 resize-none placeholder-slate-500 focus:border-teal-500 transition-colors leading-relaxed"
+                            spellCheck="true"
+                        />
+                        <div className="absolute bottom-2 right-2 flex gap-4 text-xs text-slate-500 bg-slate-800/80 px-3 py-1 rounded-full backdrop-blur-sm border border-slate-700">
+                            <span>{stats.words} Words</span>
+                            <span>{stats.chars} Chars</span>
+                            <span>{stats.sentences} Sentences</span>
+                            <span>{stats.paragraphs} Paras</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Case & Format</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => transform('title_apa')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Title Case (APA)</button>
+                                <button onClick={() => transform('sentence')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Sentence Case</button>
+                                <button onClick={() => transform('upper')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">UPPERCASE</button>
+                                <button onClick={() => transform('lower')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">lowercase</button>
+                            </div>
+                        </div>
+                        <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                            <label className="text-xs font-bold text-teal-500 uppercase tracking-wider mb-2 block">Academic Tools</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={formalize} className="bg-teal-900/30 hover:bg-teal-900/50 border border-teal-900 text-teal-300 px-3 py-2 rounded text-sm">Formalize Tone</button>
+                                <button onClick={cleanSpacing} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Clean Spacing</button>
+                                <button onClick={escapeLatex} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Latex Escape</button>
+                                <button onClick={stripCitations} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Remove Citations</button>
+                                <button onClick={fixBrokenLines} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200" title="Merges lines cut by PDF formatting">Fix PDF Breaks</button>
+                                <button onClick={smartDashes} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200" title="Converts hyphens to en/em dashes">Smart Dashes</button>
+                                <button onClick={sortLines} className="col-span-2 bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200 border border-slate-600 border-dashed">Sort Lines (A-Z)</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center border-t border-slate-700 pt-4">
+                        <button onClick={() => setText('')} className="text-red-400 hover:text-red-300 text-sm font-medium px-2">Clear All</button>
+                        <button onClick={() => copyToClipboard(text, showToast)} className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded-lg font-medium transition-colors">Copy Result</button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        function App() {
+            const [activeTab, setActiveTab] = useState('equation');
+            const [toastMsg, setToastMsg] = useState(null);
+
+            const showToast = (msg) => {
+                setToastMsg(msg);
+                setTimeout(() => setToastMsg(null), 3000);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans selection:bg-blue-500/30">
+                    <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+                        <div className="max-w-6xl mx-auto px-4">
+                            <div className="flex items-center justify-between h-16">
+                                <span className="text-2xl font-serif italic font-bold bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent">
+                                    Academic Suite
+                                </span>
+                                <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
+                                    <button
+                                        onClick={() => setActiveTab('equation')}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'equation' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        Equation Editor
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('text')}
+                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'text' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                    >
+                                        Text Tools
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-4 md:p-6 overflow-hidden flex flex-col">
+                        {activeTab === 'equation' ? (
+                            <EquationEditor showToast={showToast} />
+                        ) : (
+                            <TextTools showToast={showToast} />
+                        )}
+                    </main>
+
+                    <Toast message={toastMsg} />
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

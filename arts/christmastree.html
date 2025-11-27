@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Tree</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600&family=Sacramento&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            color: #e0e0e0;
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none; /* Let clicks pass through to canvas primarily */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 300;
+            letter-spacing: 0.5rem;
+            text-transform: uppercase;
+            font-size: 1.5rem;
+            margin: 0;
+            color: #d4af37; /* Metallic Gold */
+        }
+
+        h2 {
+            font-family: 'Sacramento', cursive;
+            font-size: 2.5rem;
+            margin: -0.5rem 0 0 0;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        .controls {
+            pointer-events: auto;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 10, 0.8);
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            backdrop-filter: blur(5px);
+            margin-bottom: 2rem;
+            align-self: center;
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1rem;
+        }
+
+        button:hover {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: #d4af37;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+
+        button.active {
+            background: #d4af37;
+            color: #000;
+            border-color: #d4af37;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+        }
+
+        .instruction {
+            position: absolute;
+            bottom: 6rem;
+            width: 100%;
+            text-align: center;
+            opacity: 0.7;
+            font-size: 0.8rem;
+            pointer-events: none;
+        }
+
+        /* Color Picker */
+        .palette {
+            display: flex;
+            gap: 10px;
+            margin-left: 1rem;
+            border-left: 1px solid rgba(255,255,255,0.2);
+            padding-left: 1rem;
+        }
+        
+        .color-opt {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .color-opt:hover { transform: scale(1.2); }
+        .color-opt.selected { border-color: white; transform: scale(1.2); }
+
+        @media (max-width: 640px) {
+            body { overflow: auto; }
+            #ui-layer { padding: 1rem; }
+            h1 { font-size: 1.1rem; letter-spacing: 0.3rem; }
+            h2 { font-size: 1.8rem; }
+            .controls {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                padding: 0.75rem 1rem;
+                width: calc(100% - 1rem);
+            }
+            button {
+                flex: 1 1 auto;
+                min-width: 120px;
+                font-size: 0.75rem;
+                padding: 0.5rem 0.75rem;
+            }
+            .palette {
+                width: 100%;
+                margin-left: 0;
+                padding-left: 0;
+                border-left: 0;
+                border-top: 1px solid rgba(255,255,255,0.2);
+                padding-top: 0.5rem;
+                justify-content: center;
+            }
+            .instruction {
+                bottom: 4.5rem;
+                font-size: 0.75rem;
+                padding: 0 0.5rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="treeCanvas"></canvas>
+    </div>
+
+    <div id="ui-layer">
+        <div class="header">
+            <h1>Christmas Tree</h1>
+        </div>
+
+        <div class="instruction" id="statusText">
+            Drag to rotate & tilt • Click to add ornaments
+        </div>
+
+        <div class="controls">
+            <button id="btn-rotate" class="active">View</button>
+            <button id="btn-draw">Sign / Draw</button>
+            <button id="btn-clear">Clear Signs</button>
+            <button id="btn-theme">Theme: Classic</button>
+            
+            <div class="palette">
+                <div class="color-opt selected" style="background: #00ffff;" data-color="#00ffff"></div>
+                <div class="color-opt" style="background: #ff00ff;" data-color="#ff00ff"></div>
+                <div class="color-opt" style="background: #d4af37;" data-color="#d4af37"></div>
+                <div class="color-opt" style="background: #ff3333;" data-color="#ff3333"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * ARIX SIGNATURE ENGINE
+ * A custom 3D particle and line rendering engine for the tree.
+ */
+
+const canvas = document.getElementById('treeCanvas');
+const ctx = canvas.getContext('2d');
+let width, height;
+
+// State
+let time = 0;
+const scene = {
+    rotationY: 0,
+    targetRotationY: 0,
+    tiltX: 0.2, // Initial tilt (looking slightly down)
+    zoom: 1,
+    autoRotate: true
+};
+
+const interaction = {
+    isDragging: false,
+    lastX: 0,
+    lastY: 0,
+    mode: 'view', // 'view' or 'draw'
+    drawingPoints: [], // Current stroke
+    signatures: [],    // Completed strokes
+    currentColor: '#00ffff'
+};
+
+const ornaments = [];
+const gifts = [];
+const treeLights = [];
+
+// Configuration
+const TREE_HEIGHT = 600;
+const TREE_BASE_RADIUS = 250;
+const SPIRAL_LOOPS = 8;
+const COLOR_GOLD = '#d4af37';
+const THEMES = [
+    {
+        name: 'Classic',
+        background: ['#0f172a', '#000000'],
+        garlandHueBase: 160,
+        garlandHueRange: 70,
+        ribbonColor: COLOR_GOLD,
+        lights: ['#ff8888', '#ffe066', '#8be9fd', '#7cf57c', '#ffffff'],
+        ornaments: ['#ff5f6d', '#ffd166', '#26d7ae', '#7f8bff', '#f4f4f4', '#ffb347'],
+        gifts: ['#e64545', '#d9b26f', '#26d7ae', '#7f8bff', '#ff7f50']
+    },
+    {
+        name: 'Frost',
+        background: ['#0b1224', '#03060d'],
+        garlandHueBase: 195,
+        garlandHueRange: 80,
+        ribbonColor: '#9ad0ff',
+        lights: ['#9ad0ff', '#7cf0d7', '#ffffff', '#a7b2ff'],
+        ornaments: ['#7cf0d7', '#9ad0ff', '#ffffff', '#c2e8ff', '#b3a6ff'],
+        gifts: ['#9ad0ff', '#7cf0d7', '#ffffff', '#b7c7ff', '#7f8bff']
+    },
+    {
+        name: 'Berry',
+        background: ['#1c0f1f', '#050307'],
+        garlandHueBase: 320,
+        garlandHueRange: 60,
+        ribbonColor: '#ff6fa5',
+        lights: ['#ff6fa5', '#ff9f43', '#ffd166', '#ffffff'],
+        ornaments: ['#ff6fa5', '#ff9f43', '#ffd166', '#ffe9f2', '#9b7bff'],
+        gifts: ['#ff6fa5', '#ff9f43', '#ffd166', '#b184ff', '#2dd4bf']
+    }
+];
+
+let currentThemeIndex = 0;
+let currentTheme = THEMES[0];
+let garlandHueBase = currentTheme.garlandHueBase;
+let garlandHueRange = currentTheme.garlandHueRange;
+let backgroundGradient = { inner: currentTheme.background[0], outer: currentTheme.background[1] };
+let ribbonColor = currentTheme.ribbonColor || COLOR_GOLD;
+let themeButtonEl = null;
+
+// Resize Handler
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- 3D UTILS ---
+
+function project3D(x, y, z) {
+    // Simple perspective projection
+    const fov = 800;
+    const scale = fov / (fov + z);
+    const x2d = x * scale + width / 2;
+    const y2d = y * scale + height / 2;
+    return { x: x2d, y: y2d, scale: scale, visible: z > -fov, z_abs: z }; 
+}
+
+// 3D Transformation Pipeline: Rotate Y (Scene) -> Rotate X (Tilt)
+function transform3D(x, y, z) {
+    // 1. Rotate around Y axis (Scene Rotation)
+    let radY = scene.rotationY;
+    let x1 = x * Math.cos(radY) - z * Math.sin(radY);
+    let z1 = x * Math.sin(radY) + z * Math.cos(radY);
+    let y1 = y;
+
+    // 2. Rotate around X axis (Tilt)
+    let radX = scene.tiltX;
+    let y2 = y1 * Math.cos(radX) - z1 * Math.sin(radX);
+    let z2 = y1 * Math.sin(radX) + z1 * Math.cos(radX);
+    let x2 = x1;
+
+    return { x: x2, y: y2, z: z2 };
+}
+
+// Helper for local rotations (used in signatures/objects)
+function rotateY_only(x, z, angle) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    return {
+        x: x * cos - z * sin,
+        z: x * sin + z * cos
+    };
+}
+
+// Color helpers for subtle shading
+function hexToRgb(hex) {
+    const clean = hex.replace('#', '');
+    const parsed = clean.length === 3
+        ? clean.split('').map(c => parseInt(c + c, 16))
+        : [parseInt(clean.substr(0, 2), 16), parseInt(clean.substr(2, 2), 16), parseInt(clean.substr(4, 2), 16)];
+    return { r: parsed[0], g: parsed[1], b: parsed[2] };
+}
+
+function shadeColor(hex, factor = 1, alpha = 1) {
+    const { r, g, b } = hexToRgb(hex);
+    const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+    return `rgba(${clamp(r * factor)}, ${clamp(g * factor)}, ${clamp(b * factor)}, ${alpha})`;
+}
+
+function applyTheme(theme) {
+    currentTheme = theme;
+    garlandHueBase = theme.garlandHueBase;
+    garlandHueRange = theme.garlandHueRange;
+    backgroundGradient = { inner: theme.background[0], outer: theme.background[1] };
+    ribbonColor = theme.ribbonColor || COLOR_GOLD;
+
+    // Update existing assets to new palette
+    treeLights.forEach(l => {
+        l.color = theme.lights[Math.floor(Math.random() * theme.lights.length)];
+    });
+    ornaments.forEach((o, idx) => {
+        o.color = theme.ornaments[idx % theme.ornaments.length];
+    });
+    gifts.forEach((g, idx) => {
+        g.color = theme.gifts[idx % theme.gifts.length];
+    });
+
+    if (themeButtonEl) {
+        themeButtonEl.textContent = `Theme: ${theme.name}`;
+    }
+}
+
+
+// --- TREE GENERATION ---
+
+function getTreeSpiralPoint(t) {
+    // t goes from 0 (top) to 1 (bottom)
+    const y = (t - 0.5) * TREE_HEIGHT;
+    const radius = t * TREE_BASE_RADIUS;
+    const angle = t * Math.PI * 2 * SPIRAL_LOOPS;
+    
+    // Add some "signature" style waviness
+    const wave = Math.sin(t * 20 + time * 0.002) * 10;
+    
+    const x = Math.cos(angle) * (radius + wave);
+    const z = Math.sin(angle) * (radius + wave);
+    
+    return { x, y, z, t };
+}
+
+// Initialize ambient sparkles (snow particles)
+const particles = [];
+for(let i=0; i<300; i++) { // Increased snowflakes
+    particles.push({
+        x: (Math.random() - 0.5) * width * 2, // Wider spread
+        y: (Math.random() - 0.5) * height * 2, // Taller spread
+        z: (Math.random() - 0.5) * 1000, // Deeper spread
+        speed: Math.random() * 2 + 0.5,
+        size: Math.random() * 2,
+        life: Math.random()
+    });
+}
+
+// Initialize Gifts
+function initGifts() {
+    const giftCount = 12;
+    for(let i=0; i<giftCount; i++) {
+        const angle = (i / giftCount) * Math.PI * 2 + Math.random();
+        const dist = TREE_BASE_RADIUS * (0.6 + Math.random() * 0.8);
+        const size = 30 + Math.random() * 30;
+        const palette = currentTheme.gifts;
+        const color = palette[Math.floor(Math.random() * palette.length)];
+        
+        gifts.push({
+            x: Math.cos(angle) * dist,
+            y: TREE_HEIGHT/2 + size/2 - 20, // Sit on "floor"
+            z: Math.sin(angle) * dist,
+            size: size,
+            color: color,
+            rotation: Math.random() * Math.PI
+        });
+    }
+}
+initGifts();
+
+// Initialize Tree Lights
+function initTreeLights() {
+    const lightCount = 80;
+    for (let i = 0; i < lightCount; i++) {
+        const t = Math.random(); // Position along the height of the tree (0 to 1)
+        const point = getTreeSpiralPoint(t);
+        const palette = currentTheme.lights;
+        treeLights.push({
+            x: point.x,
+            y: point.y,
+            z: point.z,
+            color: palette[Math.floor(Math.random() * palette.length)],
+            offset: Math.random() * Math.PI * 2, // For pulsating effect
+            size: 3 + Math.random() * 2
+        });
+    }
+}
+initTreeLights();
+
+// Initialize Candies (e.g., Candy Canes)
+// Candies removed
+
+// Initialize some starting ornaments
+function initOrnaments() {
+    for(let i=0; i<50; i++) { // Increased ornaments
+        const t = Math.random();
+        const radius = t * TREE_BASE_RADIUS * 0.9;
+        const angle = Math.random() * Math.PI * 2;
+        const y = (t - 0.5) * TREE_HEIGHT;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        
+        const colors = currentTheme.ornaments;
+        const shapes = ['sphere', 'diamond'];
+        
+        ornaments.push({
+            x: x, y: y, z: z,
+            color: colors[Math.floor(Math.random()*colors.length)],
+            birth: Math.random() * 100,
+            shape: shapes[Math.floor(Math.random()*shapes.length)],
+            size: 5 + Math.random() * 8 // Varied ornament sizes
+        });
+    }
+}
+initOrnaments();
+
+// --- INTERACTION HANDLERS ---
+
+const statusText = document.getElementById('statusText');
+const btnRotate = document.getElementById('btn-rotate');
+const btnDraw = document.getElementById('btn-draw');
+const btnClear = document.getElementById('btn-clear');
+const btnTheme = document.getElementById('btn-theme');
+themeButtonEl = btnTheme;
+
+btnRotate.addEventListener('click', () => setMode('view'));
+btnDraw.addEventListener('click', () => setMode('draw'));
+btnClear.addEventListener('click', () => {
+    interaction.signatures = [];
+});
+btnTheme.addEventListener('click', () => {
+    currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
+    applyTheme(THEMES[currentThemeIndex]);
+});
+
+// Color Picker Logic
+document.querySelectorAll('.color-opt').forEach(el => {
+    el.addEventListener('click', (e) => {
+        document.querySelectorAll('.color-opt').forEach(d => d.classList.remove('selected'));
+        e.target.classList.add('selected');
+        interaction.currentColor = e.target.getAttribute('data-color');
+    });
+});
+
+applyTheme(THEMES[currentThemeIndex]);
+
+function setMode(mode) {
+    interaction.mode = mode;
+    if(mode === 'view') {
+        btnRotate.classList.add('active');
+        btnDraw.classList.remove('active');
+        statusText.innerText = "Drag to rotate & tilt • Click to add ornaments";
+        scene.autoRotate = true;
+    } else {
+        btnRotate.classList.remove('active');
+        btnDraw.classList.add('active');
+        statusText.innerText = "Draw to sign the tree in 3D space";
+        scene.autoRotate = false;
+    }
+}
+
+// Mouse Events
+canvas.addEventListener('mousedown', (e) => {
+    interaction.isDragging = true;
+    interaction.lastX = e.clientX;
+    interaction.lastY = e.clientY;
+    
+    if (interaction.mode === 'draw') {
+        interaction.drawingPoints = [];
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!interaction.isDragging) return;
+
+    if (interaction.mode === 'view') {
+        const deltaX = e.clientX - interaction.lastX;
+        const deltaY = e.clientY - interaction.lastY;
+        
+        scene.targetRotationY += deltaX * 0.005;
+        scene.tiltX += deltaY * 0.005;
+        
+        // Clamp tilt to avoid flipping upside down
+        scene.tiltX = Math.max(-0.5, Math.min(0.5, scene.tiltX));
+        
+        scene.autoRotate = false; // Stop auto rotate if user interacts
+    } else if (interaction.mode === 'draw') {
+        const mouseX = e.clientX - width/2;
+        const mouseY = e.clientY - height/2;
+        
+        interaction.drawingPoints.push({
+            x: mouseX,
+            y: mouseY,
+            rY: scene.rotationY,
+            color: interaction.currentColor
+        });
+    }
+
+    interaction.lastX = e.clientX;
+    interaction.lastY = e.clientY;
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    interaction.isDragging = false;
+    
+    if (interaction.mode === 'draw') {
+        if (interaction.drawingPoints.length > 2) {
+            interaction.signatures.push([...interaction.drawingPoints]);
+        }
+        interaction.drawingPoints = [];
+    } else if (interaction.mode === 'view') {
+        const dist = Math.hypot(e.clientX - interaction.lastX, e.clientY - interaction.lastY);
+        if (dist < 5) {
+            addOrnament(e.clientX, e.clientY);
+        }
+    }
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    interaction.isDragging = true;
+    interaction.lastX = touch.clientX;
+    interaction.lastY = touch.clientY;
+    if (interaction.mode === 'draw') interaction.drawingPoints = [];
+}, {passive: false});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!interaction.isDragging) return;
+    const touch = e.touches[0];
+    
+    if (interaction.mode === 'view') {
+        const deltaX = touch.clientX - interaction.lastX;
+        const deltaY = touch.clientY - interaction.lastY;
+        
+        scene.targetRotationY += deltaX * 0.01;
+        scene.tiltX += deltaY * 0.01;
+        scene.tiltX = Math.max(-0.5, Math.min(0.5, scene.tiltX));
+        
+        scene.autoRotate = false;
+    } else {
+         const mouseX = touch.clientX - width/2;
+         const mouseY = touch.clientY - height/2;
+         interaction.drawingPoints.push({ x: mouseX, y: mouseY, rY: scene.rotationY, color: interaction.currentColor });
+    }
+    interaction.lastX = touch.clientX;
+    interaction.lastY = touch.clientY;
+}, {passive: false});
+
+canvas.addEventListener('touchend', () => {
+    interaction.isDragging = false;
+    if (interaction.mode === 'draw' && interaction.drawingPoints.length > 2) {
+        interaction.signatures.push([...interaction.drawingPoints]);
+        interaction.drawingPoints = [];
+    }
+});
+
+
+function addOrnament(screenX, screenY) {
+    // Simplified placement for 3D tilt
+    // Just place it on the screen plane projected to tree surface approximation
+    const y = screenY - height/2;
+    let t = (y / (TREE_HEIGHT * 0.8)) + 0.5;
+    if(t < 0) t = 0;
+    if(t > 1) t = 1;
+    
+    const radius = t * TREE_BASE_RADIUS;
+    
+    // We want to place it facing the camera.
+    // Camera is at (0, 0, -largeZ) effectively in view space.
+    // We need to reverse the current rotations to find the world position.
+    // For simplicity, we'll just attach it to the current "front" of the tree logic
+    const angle = -scene.rotationY + Math.PI/2; 
+    
+    const worldX = Math.cos(angle) * radius;
+    const worldZ = Math.sin(angle) * radius;
+    
+    ornaments.push({
+        x: worldX,
+        y: y, // This is technically screen Y, mapping to world Y roughly
+        z: worldZ,
+        color: interaction.currentColor,
+        birth: time,
+        shape: Math.random() > 0.5 ? 'diamond' : 'sphere',
+        size: 5 + Math.random() * 8
+    });
+}
+
+
+// --- RENDERING ---
+
+function drawLine(p1, p2, color, width, alpha) {
+    if (!p1.visible || !p2.visible) return;
+    
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width * p1.scale;
+    ctx.globalAlpha = alpha;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+}
+
+function drawCube(center, size, color) {
+    const hs = size / 2;
+    const cosR = Math.cos(center.rotation);
+    const sinR = Math.sin(center.rotation);
+    const faceShades = [1, 0.9, 0.9, 0.92, 1.08, 0.75];
+
+    const corners = [
+        {x: -hs, y: -hs, z: -hs}, {x: hs, y: -hs, z: -hs},
+        {x: hs, y: hs, z: -hs}, {x: -hs, y: hs, z: -hs},
+        {x: -hs, y: -hs, z: hs}, {x: hs, y: -hs, z: hs},
+        {x: hs, y: hs, z: hs}, {x: -hs, y: hs, z: hs}
+    ];
+    
+    const projectPoint = (lx, ly, lz) => {
+        const rx = lx * cosR - lz * sinR;
+        const rz = lx * sinR + lz * cosR;
+        
+        const wx = center.x + rx;
+        const wy = center.y + ly;
+        const wz = center.z + rz;
+        
+        const t = transform3D(wx, wy, wz);
+        const proj = project3D(t.x, t.y, t.z);
+        return { ...proj, z_abs: proj.z_abs };
+    };
+
+    // Precompute projected corners for faces
+    const projectedCorners = corners.map(p => projectPoint(p.x, p.y, p.z));
+
+    // Indices for faces
+    const faces = [
+        [0, 1, 2, 3], // Front
+        [4, 5, 6, 7], // Back
+        [0, 4, 7, 3], // Left
+        [1, 5, 6, 2], // Right
+        [0, 1, 5, 4], // Top (y = -hs)
+        [3, 2, 6, 7]  // Bottom (y = hs)
+    ];
+
+    const projectedFaces = [];
+
+    faces.forEach((faceIndices, faceIdx) => {
+        const currentFaceCorners = faceIndices.map(i => projectedCorners[i]);
+        const avgZ = currentFaceCorners.reduce((sum, p) => sum + p.z_abs, 0) / currentFaceCorners.length;
+        projectedFaces.push({ corners: currentFaceCorners, avgZ: avgZ, faceId: faceIdx });
+    });
+
+    // Sort faces by Z-depth (farther first)
+    projectedFaces.sort((a, b) => b.avgZ - a.avgZ);
+
+    projectedFaces.forEach(face => {
+        if (!face.corners[0].visible) return; 
+
+        ctx.beginPath();
+        ctx.moveTo(face.corners[0].x, face.corners[0].y);
+        for(let i=1; i<face.corners.length; i++) {
+            ctx.lineTo(face.corners[i].x, face.corners[i].y);
+        }
+        ctx.closePath();
+
+        ctx.fillStyle = shadeColor(color, faceShades[face.faceId], 0.9);
+        ctx.shadowBlur = 0; 
+        ctx.fill();
+
+        ctx.strokeStyle = shadeColor(color, 1.05, 0.8);
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    });
+
+    // --- Ribbons (3D aware) ---
+    const ribbonSegments = [
+        // Strap along X direction (crossing front/back)
+        [{x: -hs, y: -hs, z: 0}, {x: hs, y: -hs, z: 0}], // top
+        [{x: 0, y: -hs, z: -hs}, {x: 0, y: hs, z: -hs}], // front
+        [{x: -hs, y: hs, z: 0}, {x: hs, y: hs, z: 0}],   // bottom
+        [{x: 0, y: -hs, z: hs}, {x: 0, y: hs, z: hs}],   // back
+        // Strap along Z direction (crossing left/right)
+        [{x: 0, y: -hs, z: -hs}, {x: 0, y: -hs, z: hs}], // top
+        [{x: hs, y: -hs, z: 0}, {x: hs, y: hs, z: 0}],   // right
+        [{x: 0, y: hs, z: -hs}, {x: 0, y: hs, z: hs}],   // bottom
+        [{x: -hs, y: -hs, z: 0}, {x: -hs, y: hs, z: 0}], // left
+    ].map(seg => {
+        const a = projectPoint(seg[0].x, seg[0].y, seg[0].z);
+        const b = projectPoint(seg[1].x, seg[1].y, seg[1].z);
+        return {
+            a, b,
+            depth: (a.z_abs + b.z_abs) / 2,
+            scale: (a.scale + b.scale) / 2
+        };
+    }).filter(s => s.a.visible && s.b.visible)
+      .sort((a, b) => b.depth - a.depth); // far to near
+
+    ribbonSegments.forEach(seg => {
+        ctx.strokeStyle = shadeColor(ribbonColor, 1.15, 0.95); 
+        ctx.lineWidth = 1.5 + seg.scale * 1.5;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = shadeColor(ribbonColor, 1.2, 0.9);
+        ctx.beginPath();
+        ctx.moveTo(seg.a.x, seg.a.y);
+        ctx.lineTo(seg.b.x, seg.b.y);
+        ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+
+    // Bow (on Top Face, use 3D projection helper)
+    const bowSize = size * 0.6;
+    const bowHeight = size * 0.4;
+    const yTop = -size/2; 
+
+    const pCenter = projectPoint(0, yTop, 0);
+    if (pCenter.visible) {
+        const pL1 = projectPoint(-bowSize, yTop - bowHeight, bowSize*0.2);
+        const pL2 = projectPoint(-bowSize, yTop + bowHeight*0.2, -bowSize*0.2);
+        const pR1 = projectPoint(bowSize, yTop - bowHeight, -bowSize*0.2);
+        const pR2 = projectPoint(bowSize, yTop + bowHeight*0.2, bowSize*0.2);
+
+        const cross1a = projectPoint(-hs, yTop, 0);
+        const cross1b = projectPoint(hs, yTop, 0);
+        const cross2a = projectPoint(0, yTop, -hs);
+        const cross2b = projectPoint(0, yTop, hs);
+
+        ctx.strokeStyle = shadeColor(ribbonColor, 1.2, 0.95);
+        ctx.lineWidth = 1.5 + pCenter.scale;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = shadeColor(ribbonColor, 1.1, 0.9);
+
+        // Cross ribbon on top
+        ctx.beginPath();
+        ctx.moveTo(cross1a.x, cross1a.y);
+        ctx.lineTo(cross1b.x, cross1b.y);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(cross2a.x, cross2a.y);
+        ctx.lineTo(cross2b.x, cross2b.y);
+        ctx.stroke();
+
+        // Loops
+        ctx.beginPath();
+        ctx.moveTo(pCenter.x, pCenter.y);
+        ctx.bezierCurveTo(pL1.x, pL1.y, pL2.x, pL2.y, pCenter.x, pCenter.y);
+        ctx.moveTo(pCenter.x, pCenter.y);
+        ctx.bezierCurveTo(pR1.x, pR1.y, pR2.x, pR2.y, pCenter.x, pCenter.y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+}
+
+function drawStar() {
+    const y = -TREE_HEIGHT/2 - 25;
+    const size = 30;
+    
+    // Spin around vertical Y-axis (3D spin)
+    const spinAngle = time * 0.05;
+
+    const points = [];
+    
+    for(let i=0; i<10; i++) {
+        // Define upright star in local 2D (XY)
+        const angle = i * Math.PI / 5 - Math.PI/2;
+        const rad = i % 2 === 0 ? size : size/2;
+        
+        const lx = Math.cos(angle) * rad;
+        const ly = Math.sin(angle) * rad;
+        
+        // Rotate around local Y-axis
+        // This makes the star spin like a coin or top
+        const sx = lx * Math.cos(spinAngle);
+        const sz = lx * Math.sin(spinAngle);
+        const sy = ly;
+        
+        // Translate to top of tree and apply scene transform
+        // World position
+        const wx = sx;
+        const wy = sy + y;
+        const wz = sz;
+        
+        const t = transform3D(wx, wy, wz);
+        points.push(project3D(t.x, t.y, t.z));
+    }
+    
+    // Safety check for visibility
+    if (!points[0].visible) return;
+    
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ffff00';
+    ctx.fillStyle = '#ffffcc';
+    ctx.beginPath();
+    
+    ctx.moveTo(points[0].x, points[0].y);
+    for(let i=1; i<points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+}
+
+function drawTreeLight(light) {
+    // Simple glowing dot
+    const tr = transform3D(light.x, light.y, light.z);
+    const proj = project3D(tr.x, tr.y, tr.z);
+    
+    if (!proj.visible) return;
+    
+    const pulse = 1 + Math.sin(time * 0.1 + light.offset) * 0.3;
+    const size = light.size * proj.scale * pulse;
+    
+    const halo = ctx.createRadialGradient(proj.x, proj.y, size * 0.2, proj.x, proj.y, size * 2.4);
+    halo.addColorStop(0, shadeColor(light.color, 1.05, 0.9));
+    halo.addColorStop(1, shadeColor(light.color, 0.2, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(proj.x, proj.y, size * 2.5, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = shadeColor(light.color, 1.2, 1);
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = shadeColor(light.color, 1, 0.9);
+    ctx.beginPath();
+    ctx.arc(proj.x, proj.y, size, 0, Math.PI*2);
+    ctx.fill();
+
+    // Small sparkle cross
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = shadeColor(light.color, 1.4, 0.9);
+    ctx.lineWidth = Math.max(0.6, size * 0.4);
+    ctx.beginPath();
+    ctx.moveTo(proj.x - size * 1.4, proj.y);
+    ctx.lineTo(proj.x + size * 1.4, proj.y);
+    ctx.moveTo(proj.x, proj.y - size * 1.4);
+    ctx.lineTo(proj.x, proj.y + size * 1.4);
+    ctx.stroke();
+}
+
+// Candy canes removed
+
+function render() {
+    ctx.clearRect(0, 0, width, height);
+    
+    const gradient = ctx.createRadialGradient(width/2, height/2, 100, width/2, height/2, width);
+    gradient.addColorStop(0, backgroundGradient.inner);
+    gradient.addColorStop(1, backgroundGradient.outer);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    time++;
+    if(scene.autoRotate) {
+        scene.rotationY += 0.005;
+    } else {
+        scene.rotationY += (scene.targetRotationY - scene.rotationY) * 0.1;
+    }
+    
+    particles.forEach(p => {
+        p.y += p.speed;
+        // If particle goes off bottom, reset it to the top with a new random Z
+        if(p.y > height/2) {
+            p.y = -height/2;
+            p.x = (Math.random() - 0.5) * width * 2; // New random X
+            p.z = (Math.random() - 0.5) * 1000; // New random Z depth
+        }
+        
+        // Apply full 3D transformation to particles
+        let t = transform3D(p.x, p.y, p.z);
+        let proj = project3D(t.x, t.y, t.z); 
+        
+        if (proj.visible) {
+            // Scale opacity and size by depth
+            const opacity = Math.abs(Math.sin(time * 0.05 + p.life)) * proj.scale;
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, p.size * proj.scale, 0, Math.PI*2);
+            ctx.fill();
+        }
+    });
+
+    // Sort gifts by their (transformed) Z-coordinate
+    const sortedGifts = gifts.map(g => {
+        const t = transform3D(g.x, g.y, g.z);
+        return { ...g, transformedZ: t.z };
+    }).sort((a, b) => b.transformedZ - a.transformedZ); 
+
+    sortedGifts.forEach(g => {
+        drawCube(g, g.size, g.color);
+    });
+
+    const strands = 3;
+    const pointsPerLoop = 60;
+    const totalPoints = SPIRAL_LOOPS * pointsPerLoop;
+    
+    let prevPoints = [];
+
+    for (let i = 0; i <= totalPoints; i++) {
+        const t = i / totalPoints;
+        const basePoint = getTreeSpiralPoint(t);
+        
+        for(let s = 0; s < strands; s++) {
+            const offsetY = s * 5;
+            
+            // Apply full transform
+            const tr = transform3D(basePoint.x, basePoint.y + offsetY, basePoint.z);
+            const proj = project3D(tr.x, tr.y, tr.z);
+            
+            if (i > 0 && prevPoints[s]) {
+                const hue = (t * garlandHueRange + garlandHueBase) % 360; 
+                const color = `hsl(${hue}, 80%, 60%)`;
+                
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+                drawLine(prevPoints[s], proj, color, 2, 0.8);
+                ctx.shadowBlur = 0; 
+            }
+            prevPoints[s] = proj;
+        }
+    }
+    
+    // Draw Tree Lights
+    treeLights.forEach(l => drawTreeLight(l));
+    
+    ornaments.forEach(o => {
+        const tr = transform3D(o.x, o.y, o.z);
+        const proj = project3D(tr.x, tr.y, tr.z);
+        
+        if (proj.visible) {
+            const pulse = 1 + Math.sin(time * 0.1 + o.birth) * 0.2;
+            const size = o.size * proj.scale * pulse;
+            const grad = ctx.createRadialGradient(
+                proj.x - size * 0.25, proj.y - size * 0.25, size * 0.15,
+                proj.x, proj.y, size
+            );
+            grad.addColorStop(0, shadeColor(o.color, 1.3, 0.95));
+            grad.addColorStop(0.55, shadeColor(o.color, 1, 0.95));
+            grad.addColorStop(1, shadeColor(o.color, 0.45, 0.9));
+            
+            ctx.fillStyle = grad;
+            ctx.shadowBlur = 18 * proj.scale;
+            ctx.shadowColor = shadeColor(o.color, 1, 0.8);
+            
+            ctx.beginPath();
+            if (o.shape === 'diamond') {
+                ctx.moveTo(proj.x, proj.y - size);
+                ctx.lineTo(proj.x + size, proj.y);
+                ctx.lineTo(proj.x, proj.y + size);
+                ctx.lineTo(proj.x - size, proj.y);
+            } else {
+                ctx.arc(proj.x, proj.y, size, 0, Math.PI*2);
+            }
+            ctx.fill();
+            ctx.strokeStyle = shadeColor(o.color, 1.4, 0.9);
+            ctx.lineWidth = Math.max(1, size * 0.15);
+            ctx.stroke();
+            
+            ctx.fillStyle = shadeColor('#ffffff', 1, 0.65);
+            ctx.beginPath();
+            ctx.arc(proj.x - size*0.3, proj.y - size*0.3, size*0.3, 0, Math.PI*2);
+            ctx.fill();
+            
+            ctx.shadowBlur = 0;
+        }
+    });
+
+    drawStar();
+
+    const allSignatures = [...interaction.signatures];
+    if (interaction.drawingPoints.length > 0) {
+        allSignatures.push(interaction.drawingPoints);
+    }
+
+    allSignatures.forEach(sig => {
+        if(sig.length < 2) return;
+        
+        ctx.beginPath();
+        for(let i=0; i<sig.length; i++) {
+            const pt = sig[i];
+            
+            const radiusAtY = ((pt.y / TREE_HEIGHT) + 0.5) * TREE_BASE_RADIUS;
+            const r = Math.max(10, radiusAtY); 
+            
+            const angleDiff = scene.rotationY - pt.rY;
+            const x_raw = pt.x; 
+            const z_raw = r; 
+            
+            const worldBase = rotateY_only(x_raw, z_raw, -pt.rY);
+            
+            const tr = transform3D(worldBase.x, pt.y, worldBase.z);
+            const proj = project3D(tr.x, tr.y, tr.z);
+            
+            if (i===0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+            
+            ctx.strokeStyle = pt.color || '#fff';
+        }
+        
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = sig[0].color || '#fff';
+        ctx.stroke();
+        ctx.shadowBlur = 4;
+        ctx.lineWidth = 4;
+        ctx.stroke(); // subtle second pass to thicken single stroke and improve legibility
+        ctx.shadowBlur = 0;
+    });
+    
+    requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>

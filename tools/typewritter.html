@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HandTyper | Continental Model</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* --- DYNAMIC VARIABLES --- */
+            
+            /* Machine Body Colors (Default: Obsidian) */
+            --finish-highlight: #222;
+            --finish-deep: #050505;
+            --finish-glare: rgba(255,255,255,0.1);
+            --finish-texture: rgba(0,0,0,0.5);
+            
+            /* Key Colors */
+            --key-face: #fdfbf7;
+            --key-text: #222;
+            --key-rim: #d4d4d4;
+            --key-shadow: rgba(0,0,0,0.6);
+            
+            /* Ink Colors */
+            --ink-color: #1c1917; /* Default Black */
+            
+            /* Constants */
+            --ink-black: #1c1917;
+            --ink-red: #b91c1c;
+            --ink-blue: #1e3a8a;
+        }
+
+        body {
+            background-color: #1a1616;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(255,255,255,0.05), transparent 80%),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 2px, transparent 2px, transparent 12px),
+                linear-gradient(to bottom, #2a2323, #0f0c0c);
+            color: var(--ink-color);
+            font-family: 'Special Elite', monospace;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* --- THE CHASSIS --- */
+        .machine-body {
+            /* The glossy enamel look */
+            background: 
+                radial-gradient(ellipse at 50% 0%, var(--finish-glare) 0%, transparent 60%),
+                linear-gradient(to bottom, var(--finish-highlight) 0%, var(--finish-deep) 100%);
+            border-radius: 12px 12px 4px 4px;
+            padding: 24px;
+            box-shadow: 
+                0 30px 60px rgba(0,0,0,0.9),
+                inset 0 1px 2px rgba(255,255,255,0.2),
+                inset 0 -10px 20px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 10;
+            border-bottom: 16px solid #000;
+            transition: background 0.5s ease;
+        }
+
+        .logo-plate {
+            font-family: 'Cinzel', serif;
+            color: #eec170; /* Antique Gold */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 0.15em;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+
+        /* --- THE MECHANICS --- */
+        .platen {
+            height: 48px;
+            background: linear-gradient(to bottom, #1a1a1a 0%, #333 30%, #000 100%);
+            border-radius: 4px;
+            position: relative;
+            z-index: 5;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border-left: 16px solid #222;
+            border-right: 16px solid #222;
+            margin-bottom: -16px;
+        }
+
+        .paper-sheet {
+            background-color: #fdfbf7;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 40px 60px;
+            min-height: 220px;
+            max-height: 45vh;
+            overflow-y: auto;
+            position: relative;
+            z-index: 4;
+            /* Subtle paper grain */
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        }
+        .paper-sheet::-webkit-scrollbar { width: 0; }
+
+        .paper-bail {
+            position: absolute;
+            top: 18px; left: 0; right: 0;
+            height: 12px;
+            background: linear-gradient(to bottom, rgba(200,200,200,0.4) 0%, rgba(255,255,255,0.1) 40%, transparent 100%);
+            border-top: 1px solid rgba(255,255,255,0.3);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* --- TEXT --- */
+        #display-area {
+            user-select: none;
+            line-height: 1.8;
+            font-size: 1.4rem;
+            color: var(--ink-color);
+            text-shadow: 0 0 1px rgba(0,0,0,0.1); /* Slight ink bleed */
+        }
+        
+        .char.correct { font-weight: 700; }
+        .char.incorrect { 
+            color: var(--ink-red); 
+            font-weight: 700;
+        }
+        .char.incorrect::after {
+            content: '/';
+            position: absolute;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            color: var(--ink-red);
+            opacity: 0.8;
+        }
+        
+        .char.current::before {
+            content: '';
+            position: absolute;
+            left: -1px; bottom: 2px;
+            width: 100%; height: 2px;
+            background: #666;
+            animation: pulse 1s infinite;
+        }
+
+        /* --- KEYS --- */
+        .key {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            /* The paper inlay */
+            background: radial-gradient(circle at center, #fff 0%, var(--key-face) 70%, #d1cdc5 100%);
+            color: var(--key-text);
+            font-family: 'Courier Prime', monospace;
+            font-weight: 700;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.05s ease;
+            cursor: pointer;
+            
+            /* Structure: Housing -> Rim -> Glass */
+            box-shadow: 
+                0 0 0 2px #999, /* Inner silver edge */
+                0 0 0 5px #111, /* Black bakelite housing */
+                0 6px 6px var(--key-shadow), /* Drop shadow */
+                inset 0 0 10px rgba(0,0,0,0.1); /* Inner depth */
+        }
+
+        /* Glass Reflection */
+        .key::after {
+            content: '';
+            position: absolute;
+            top: 5px; left: 8px;
+            width: 20px; height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .key:active, .key.active {
+            transform: translateY(4px);
+            box-shadow: 
+                0 0 0 2px #999,
+                0 0 0 5px #111,
+                0 2px 2px var(--key-shadow),
+                inset 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        .key.space {
+            width: 280px;
+            border-radius: 12px;
+            background: #1a1a1a;
+            color: transparent;
+            box-shadow: 
+                0 0 0 1px #333,
+                0 6px 5px rgba(0,0,0,0.6),
+                inset 0 2px 2px rgba(255,255,255,0.1);
+        }
+        .key.space::after { display: none; } /* No glass on spacebar */
+
+        /* Key Stems */
+        .key-stem {
+            position: absolute;
+            top: -15px; left: 50%;
+            width: 4px; height: 25px;
+            background: #333;
+            transform: translateX(-50%);
+            z-index: -1;
+        }
+
+        /* --- UI CONTROLS --- */
+        .analog-counter {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 2px 6px;
+            color: #ddd;
+            font-family: 'Courier Prime', monospace;
+            border-radius: 2px;
+            min-width: 50px;
+            text-align: center;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .control-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #888;
+        }
+
+        /* Round Buttons (Ribbon/Finish) */
+        .swatch-btn {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid #444;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .swatch-btn:hover { transform: scale(1.1); }
+        .swatch-btn.active { 
+            border-color: #fff; 
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.2);
+        }
+        /* Ribbon preview pills */
+        .ribbon-swatch {
+            width: 64px;
+            height: 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), 0 2px 4px rgba(0,0,0,0.5);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+        }
+        .ribbon-swatch::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+            mix-blend-mode: screen;
+            pointer-events: none;
+        }
+        .ribbon-swatch:hover { transform: translateY(-1px); }
+        .ribbon-swatch.active {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.25), 0 4px 10px rgba(0,0,0,0.6);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            appearance: none;
+            width: 36px; height: 18px;
+            background: #222;
+            border-radius: 99px;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid #444;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 12px; height: 12px;
+            background: #888;
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+        .toggle-switch:checked { background: #0c4a6e; border-color: #0ea5e9; }
+        .toggle-switch:checked::after { transform: translateX(18px); background: #fff; }
+
+        @media (max-width: 780px) {
+            body { padding-bottom: 24px; }
+            .machine-body { padding: 16px; max-width: 100%; }
+            .logo-plate { font-size: 1rem; }
+            .platen { height: 36px; margin-bottom: -12px; }
+            .paper-sheet { padding: 20px 16px; max-height: 55vh; }
+            #display-area { font-size: 1.1rem; line-height: 1.6; }
+            .machine-body .w-full.flex { gap: 10px; }
+            .control-group { min-width: 88px; }
+            .key { width: 38px; height: 38px; font-size: 0.85rem; }
+            .key.space { width: 180px; }
+            .key-stem { height: 18px; }
+            .flex.flex-col.gap-4.select-none { transform: scale(0.92); margin-left: 0 !important; }
+            #row-2, #row-3, #row-4 { margin-left: 0 !important; }
+            .flex.justify-between.items-center.px-10.mb-6 { padding: 0 1rem; }
+            #return-lever { display: none; }
+        }
+
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <!-- Inputs -->
+    <input type="text" id="hidden-input" class="absolute opacity-0 top-0 left-0" autocomplete="off" autocapitalize="off">
+    <input type="file" id="doc-upload" class="hidden" accept=".txt">
+
+    <!-- TYPEWRITER UNIT -->
+    <div class="machine-body w-full max-w-4xl flex flex-col items-center relative perspective-[1000px]">
+        
+        <div class="logo-plate w-full">Continental Typewriter Co.</div>
+
+        <!-- Dashboard -->
+        <div class="w-full flex flex-wrap gap-4 sm:gap-6 justify-between items-start px-6 mb-2">
+            
+            <!-- Left: Stats -->
+            <div class="flex gap-4">
+                <div class="control-group">
+                    <span class="control-label">Time</span>
+                    <div id="timer" class="analog-counter">30</div>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">WPM</span>
+                    <div id="wpm" class="analog-counter text-green-500">0</div>
+                </div>
+            </div>
+
+            <!-- Center: Ribbon Color -->
+            <div class="control-group">
+                <span class="control-label">Ribbon Ink</span>
+                <div class="flex gap-2 bg-black/40 p-2 rounded-full border border-white/5 items-center">
+                    <button class="ribbon-swatch active" onclick="setRibbon('black', this)" title="Black Ink" style="background: linear-gradient(90deg, #0b0b0b 0%, #1f1f1f 100%);"></button>
+                    <button class="ribbon-swatch" onclick="setRibbon('red', this)" title="Red Ink" style="background: linear-gradient(90deg, #7f1111 0%, #b91c1c 100%);"></button>
+                    <button class="ribbon-swatch" onclick="setRibbon('blue', this)" title="Blue Ink" style="background: linear-gradient(90deg, #0b1b4a 0%, #1e3a8a 100%);"></button>
+                </div>
+            </div>
+
+            <!-- Right: Finish -->
+            <div class="control-group">
+                <span class="control-label">Machine Finish</span>
+                <div class="flex gap-2 bg-black/40 p-1.5 rounded-full border border-white/5">
+                    <button class="swatch-btn active" onclick="setFinish('obsidian', this)" title="Obsidian" style="background: #1a1a1a;"></button>
+                    <button class="swatch-btn" onclick="setFinish('burgundy', this)" title="Burgundy" style="background: #3b0f12;"></button>
+                    <button class="swatch-btn" onclick="setFinish('navy', this)" title="Navy" style="background: #0c1c2e;"></button>
+                    <button class="swatch-btn" onclick="setFinish('moss', this)" title="Moss" style="background: #1a261c;"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platen -->
+        <div class="w-[96%] platen"></div>
+
+        <!-- Paper -->
+        <div class="w-[90%] relative group cursor-text" onclick="focusInput()">
+            <div class="paper-bail"></div>
+            
+            <!-- Start Overlay -->
+            <div id="blur-overlay" class="absolute inset-0 bg-black/5 z-20 flex items-center justify-center pointer-events-none">
+                <div class="bg-[#f0ece3] px-6 py-3 shadow-xl border border-stone-300 transform -rotate-1">
+                    <p class="text-stone-800 font-bold tracking-widest uppercase font-serif text-sm">Click to Load Paper</p>
+                </div>
+            </div>
+
+            <div class="paper-sheet text-justify w-full break-words relative overflow-hidden" id="paper-container">
+                <div id="display-area" class="relative z-10">
+                    <!-- Text Injected Here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Return Lever -->
+        <button onclick="resetGame()" id="return-lever" class="absolute -right-12 top-24 w-3 h-28 bg-gradient-to-r from-gray-400 to-gray-600 rounded-r border border-gray-700 shadow-xl cursor-pointer hover:brightness-110 origin-bottom transition-transform z-0" title="Return Carriage">
+            <div class="w-8 h-8 bg-gray-300 rounded-full absolute -right-2.5 -top-2 shadow-lg border border-gray-500"></div>
+        </button>
+
+    </div>
+
+    <!-- KEYBOARD DECK -->
+    <div class="w-full max-w-4xl mt-8 px-4 pb-10 perspective-[800px]">
+        
+        <!-- Deck Controls -->
+        <div class="flex justify-between items-center px-10 mb-6">
+            <label class="flex items-center gap-3 cursor-pointer group select-none">
+                <input type="checkbox" id="sound-toggle" class="toggle-switch" checked>
+                <span class="text-stone-500 text-xs font-bold uppercase tracking-widest group-hover:text-stone-300 transition">Sound</span>
+            </label>
+
+            <label for="doc-upload" class="flex items-center gap-2 cursor-pointer group hover:text-white transition text-stone-500">
+                <span class="text-xs font-bold uppercase tracking-widest" id="upload-label">Load .TXT</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+            </label>
+        </div>
+
+        <!-- Keys -->
+        <div class="flex flex-col gap-4 select-none transform rotate-x-[10deg] origin-top scale-95">
+            <!-- Row 1 -->
+            <div class="flex justify-center gap-3" id="row-1"></div>
+            <!-- Row 2 -->
+            <div class="flex justify-center gap-3 ml-6" id="row-2"></div>
+            <!-- Row 3 -->
+            <div class="flex justify-center gap-3 ml-12" id="row-3"></div>
+            <!-- Row 4 -->
+            <div class="flex justify-center gap-3 ml-20" id="row-4"></div>
+            <!-- Space -->
+            <div class="flex justify-center mt-4">
+                <div data-key=" " class="key space"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & CONFIG ---
+        const quotes = [
+            "The quick brown fox jumps over the lazy dog. 1234567890",
+            "It was a bright cold day in April, and the clocks were striking thirteen.",
+            "All work and no play makes Jack a dull boy.",
+            "I love the smell of ink in the morning.",
+            "To be, or not to be, that is the question.",
+            "Ernest Hemingway famously wrote standing up.",
+            "Typewriters are the ancestors of the modern computer keyboard."
+        ];
+
+        const keyboardRows = [
+            ['`', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '←'],
+            ['Tab', 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
+            ['Caps', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', 'Enter'],
+            ['Shift', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 'Shift']
+        ];
+
+        const finishes = {
+            obsidian: { highlight: '#222', deep: '#050505', glare: 'rgba(255,255,255,0.1)' },
+            burgundy: { highlight: '#3b0f12', deep: '#140406', glare: 'rgba(255,255,255,0.12)' },
+            navy: { highlight: '#0c1c2e', deep: '#040b12', glare: 'rgba(255,255,255,0.1)' },
+            moss: { highlight: '#1a261c', deep: '#0a100b', glare: 'rgba(255,255,255,0.12)' }
+        };
+
+        // --- STATE ---
+        let currentText = "";
+        let typedChars = 0;
+        let errors = 0;
+        let startTime = null;
+        let timerInterval = null;
+        let timeLeft = 30;
+        let isGameActive = false;
+        let isGameFinished = false;
+        let currentCharIndex = 0;
+        let customPages = [];
+        let currentPageIndex = 0;
+        let isCustomMode = false;
+
+        // --- AUDIO ENGINE ---
+        // Global context, initialized lazily on interaction
+        let audioCtx = null;
+        // Inline mechanical key sample (tiny WAV, base64)
+        const typeSampleData = "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";
+        let typeSampleBuffer = null;
+        let typeSampleLoaded = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function decodeTypeSample() {
+            if (typeSampleLoaded) return;
+            initAudio();
+            if (!audioCtx) return;
+            const byteString = atob(typeSampleData);
+            const len = byteString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = byteString.charCodeAt(i);
+            audioCtx.decodeAudioData(bytes.buffer, (buffer) => {
+                typeSampleBuffer = buffer;
+                typeSampleLoaded = true;
+            }, () => { typeSampleLoaded = true; });
+        }
+
+        function playBufferSample(buffer, rate = 1, gainValue = 0.45) {
+            if (!buffer) return false;
+            initAudio();
+            if (!audioCtx) return false;
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer;
+            source.playbackRate.value = rate;
+            const gain = audioCtx.createGain();
+            gain.gain.value = gainValue;
+            source.connect(gain);
+            gain.connect(audioCtx.destination);
+            const t = audioCtx.currentTime;
+            source.start(t);
+            source.stop(t + buffer.duration / rate + 0.02);
+            return true;
+        }
+
+        // Generate synthetic typewriter sounds
+        function playSound(type) {
+            if (!document.getElementById('sound-toggle').checked) return;
+            // Ensure audio is initialized
+            initAudio();
+            
+            // Safety check
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const t = audioCtx.currentTime;
+            const gainMain = audioCtx.createGain();
+            gainMain.connect(audioCtx.destination);
+            gainMain.gain.value = 0.8; // Master volume increased
+
+            if (type === 'error') {
+                // Bell
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, t);
+                osc.frequency.exponentialRampToValueAtTime(800, t + 1.5);
+                const g = audioCtx.createGain();
+                g.connect(gainMain);
+                g.gain.setValueAtTime(0.5, t);
+                g.gain.exponentialRampToValueAtTime(0.01, t + 1.5);
+                osc.start(t);
+                osc.stop(t + 1.5);
+                return;
+            }
+
+            if (type === 'return') {
+                // Zip sound
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, t);
+                osc.frequency.linearRampToValueAtTime(600, t + 0.3);
+                const g = audioCtx.createGain();
+                g.connect(gainMain);
+                g.gain.setValueAtTime(0.2, t);
+                g.gain.linearRampToValueAtTime(0, t + 0.3);
+                osc.start(t);
+                osc.stop(t + 0.3);
+                return;
+            }
+
+            // --- KEYSTROKE SOUNDS ---
+            const isSpace = type === 'space';
+            decodeTypeSample();
+            const samplePlayed = !isSpace && playBufferSample(typeSampleBuffer, 0.92 + Math.random() * 0.16, 0.5);
+
+            // 1. The Body Thud (Low Resonance)
+            const oscThud = audioCtx.createOscillator();
+            oscThud.type = 'square'; 
+            oscThud.frequency.setValueAtTime(isSpace ? 60 : 120, t);
+            oscThud.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+            
+            const envThud = audioCtx.createGain();
+            envThud.connect(gainMain);
+            envThud.gain.setValueAtTime(isSpace ? 0.6 : (samplePlayed ? 0.2 : 0.4), t);
+            envThud.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            
+            oscThud.start(t);
+            oscThud.stop(t + 0.1);
+
+            // 2. The Hammer Snap (High Metallic)
+            if (!isSpace) { 
+                const oscSnap = audioCtx.createOscillator();
+                oscSnap.type = 'sawtooth';
+                const freq = 1800 + (Math.random() * 600);
+                oscSnap.frequency.setValueAtTime(freq, t);
+                
+                const envSnap = audioCtx.createGain();
+                envSnap.connect(gainMain);
+                envSnap.gain.setValueAtTime(samplePlayed ? 0.15 : 0.3, t);
+                envSnap.gain.exponentialRampToValueAtTime(0.001, t + 0.05); 
+                
+                oscSnap.start(t);
+                oscSnap.stop(t + 0.05);
+            }
+
+            // 3. Mechanism Noise (Click)
+            const oscClick = audioCtx.createOscillator();
+            oscClick.type = 'triangle';
+            oscClick.frequency.setValueAtTime(800, t);
+            oscClick.frequency.exponentialRampToValueAtTime(200, t + 0.05);
+            
+            const envClick = audioCtx.createGain();
+            envClick.connect(gainMain);
+            envClick.gain.setValueAtTime(samplePlayed ? 0.07 : 0.15, t);
+            envClick.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+            
+            oscClick.start(t);
+            oscClick.stop(t + 0.05);
+        }
+
+        // --- DOM ELEMENTS ---
+        const root = document.documentElement;
+        const displayArea = document.getElementById('display-area');
+        const hiddenInput = document.getElementById('hidden-input');
+        const blurOverlay = document.getElementById('blur-overlay');
+        const timerEl = document.getElementById('timer');
+        const wpmEl = document.getElementById('wpm');
+        const lever = document.getElementById('return-lever');
+        const uploadLabel = document.getElementById('upload-label');
+
+        // --- UI FUNCTIONS ---
+        function setRibbon(color, btn) {
+            btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if (color === 'red') root.style.setProperty('--ink-color', 'var(--ink-red)');
+            else if (color === 'blue') root.style.setProperty('--ink-color', 'var(--ink-blue)');
+            else root.style.setProperty('--ink-color', 'var(--ink-black)');
+            
+            focusInput();
+        }
+
+        function setFinish(name, btn) {
+            btn.parentNode.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const f = finishes[name];
+            root.style.setProperty('--finish-highlight', f.highlight);
+            root.style.setProperty('--finish-deep', f.deep);
+            root.style.setProperty('--finish-glare', f.glare);
+            
+            focusInput();
+        }
+
+        function initKeyboard() {
+            keyboardRows.forEach((row, i) => {
+                const rowEl = document.getElementById(`row-${i + 1}`);
+                row.forEach(key => {
+                    const container = document.createElement('div');
+                    container.className = 'relative flex justify-center';
+                    
+                    if (key.length === 1 && key !== ' ') {
+                        const stem = document.createElement('div');
+                        stem.className = 'key-stem';
+                        container.appendChild(stem);
+                    }
+
+                    const kBtn = document.createElement('div');
+                    kBtn.className = `key`;
+                    kBtn.textContent = key;
+                    kBtn.dataset.key = key.toLowerCase();
+                    
+                    if (key === '←') { kBtn.dataset.key = 'backspace'; kBtn.style.fontSize = '0.9rem'; }
+                    if (key === 'Enter') { kBtn.style.borderRadius = '10px'; kBtn.style.width = '80px'; }
+                    if (key === 'Shift') { kBtn.style.borderRadius = '10px'; kBtn.style.width = '90px'; }
+                    if (key === 'Tab' || key === 'Caps' || key === '\\') { kBtn.style.fontSize = '0.8rem'; }
+
+                    container.appendChild(kBtn);
+                    rowEl.appendChild(container);
+                });
+            });
+        }
+
+        // --- GAME LOGIC ---
+        function loadNewQuote() {
+            if (isCustomMode && customPages.length > 0) {
+                currentText = customPages[currentPageIndex];
+            } else {
+                currentText = quotes[Math.floor(Math.random() * quotes.length)];
+            }
+            displayArea.innerHTML = '';
+            currentText.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.innerText = char;
+                span.className = 'char opacity-30';
+                displayArea.appendChild(span);
+            });
+            if(displayArea.children[0]) displayArea.children[0].classList.add('current');
+        }
+
+        function resetGame() {
+            lever.style.transform = "rotate(-15deg) translateX(-10px)";
+            setTimeout(() => lever.style.transform = "none", 400);
+            playSound('return');
+
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timeLeft = isCustomMode ? 999 : 30;
+            typedChars = 0;
+            errors = 0;
+            currentCharIndex = 0;
+            isGameActive = false;
+            isGameFinished = false;
+            startTime = null;
+            
+            timerEl.innerText = isCustomMode ? '∞' : timeLeft;
+            wpmEl.innerText = '0';
+            loadNewQuote();
+            focusInput();
+        }
+
+        function focusInput() {
+            // CRITICAL: Initialize audio on first user gesture
+            initAudio();
+            
+            hiddenInput.focus();
+            blurOverlay.classList.add('opacity-0');
+        }
+
+        function animateKey(key) {
+            let k = key.toLowerCase();
+            if (key === ' ') k = ' ';
+            const el = document.querySelector(`.key[data-key="${k}"]`);
+            if (el) {
+                el.classList.add('active');
+                setTimeout(() => el.classList.remove('active'), 120);
+            }
+        }
+
+        function finishGame() {
+            isGameFinished = true;
+            isGameActive = false;
+            clearInterval(timerInterval);
+            hiddenInput.blur();
+            blurOverlay.classList.remove('opacity-0');
+            
+            if(isCustomMode && currentPageIndex < customPages.length -1) {
+                currentPageIndex++;
+                uploadLabel.innerText = "Next Page";
+            } else if (isCustomMode) {
+                currentPageIndex = 0;
+                uploadLabel.innerText = "Doc Done";
+            }
+        }
+
+        // --- INPUT HANDLING ---
+        document.getElementById('doc-upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const clean = e.target.result.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+                if (clean.length > 0) {
+                    customPages = [];
+                    const chunkSize = 350;
+                    for (let i = 0; i < clean.length; i += chunkSize) {
+                        let chunk = clean.substring(i, Math.min(i + chunkSize, clean.length));
+                        customPages.push(chunk);
+                    }
+                    isCustomMode = true;
+                    currentPageIndex = 0;
+                    uploadLabel.textContent = "Doc Ready";
+                    resetGame();
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        hiddenInput.addEventListener('keydown', (e) => {
+            if (isGameFinished) { if(e.key === 'Enter') resetGame(); return; }
+            if (e.key === 'Tab') e.preventDefault();
+            animateKey(e.key);
+            
+            if (e.key.length > 1 && e.key !== 'Backspace') return;
+            
+            if (!isGameActive) {
+                isGameActive = true;
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    if(!isCustomMode) {
+                        timeLeft--;
+                        timerEl.innerText = timeLeft;
+                        if(timeLeft<=0) finishGame();
+                    }
+                    const elapsed = (Date.now() - startTime) / 60000;
+                    const wpm = Math.max(0, Math.round(((typedChars/5) - errors) / elapsed));
+                    wpmEl.innerText = isFinite(wpm) ? wpm : 0;
+                }, 1000);
+            }
+
+            const chars = displayArea.querySelectorAll('.char');
+            if (currentCharIndex >= chars.length) return;
+
+            if (e.key === 'Backspace') {
+                if (currentCharIndex > 0) {
+                    currentCharIndex--;
+                    const prev = chars[currentCharIndex];
+                    prev.classList.remove('correct', 'incorrect');
+                    prev.classList.add('current');
+                    if (currentCharIndex + 1 < chars.length) chars[currentCharIndex+1].classList.remove('current');
+                }
+                return;
+            }
+
+            const target = currentText[currentCharIndex];
+            chars[currentCharIndex].classList.remove('current');
+            
+            if (e.key === target) {
+                chars[currentCharIndex].classList.add('correct');
+                playSound(e.key === ' ' ? 'space' : 'key');
+            } else {
+                chars[currentCharIndex].classList.add('incorrect');
+                errors++;
+                playSound('error');
+            }
+            
+            typedChars++;
+            currentCharIndex++;
+            
+            if (currentCharIndex < chars.length) chars[currentCharIndex].classList.add('current');
+            else finishGame();
+        });
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            initKeyboard();
+            loadNewQuote();
+            document.body.addEventListener('click', (e) => {
+                if (!e.target.closest('button') && !e.target.closest('label') && !e.target.closest('.key')) {
+                    focusInput();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
