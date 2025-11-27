@@ -320,9 +320,17 @@
             #return-lever { display: none; }
         }
 
+        @media (max-width: 540px) {
+            .machine-body { padding: 12px; }
+            .paper-sheet { max-height: 45vh; }
+            .flex.flex-col.gap-4.select-none { transform: scale(0.85); }
+            .key { width: 34px; height: 34px; font-size: 0.8rem; }
+            .key.space { width: 150px; }
+        }
+
     </style>
 </head>
-<body class="flex flex-col items-center justify-center p-4">
+<body class="flex flex-col items-center p-4 gap-6">
 
     <!-- Inputs -->
     <input type="text" id="hidden-input" class="absolute opacity-0 top-0 left-0" autocomplete="off" autocapitalize="off">
