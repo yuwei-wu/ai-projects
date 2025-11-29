@@ -190,6 +190,11 @@
         <canvas id="treeCanvas"></canvas>
     </div>
 
+    <a href="../index.html" class="absolute top-4 left-4 z-20 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/30 text-white/80 text-sm backdrop-blur bg-black/30 hover:bg-black/50 hover:text-white transition pointer-events-auto">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-300"></span>
+        Home
+    </a>
+
     <div id="ui-layer">
         <div class="header">
             <h1>Christmas Tree</h1>
@@ -228,6 +233,9 @@ let width, height;
 let renderScale = 1;
 let lastFrameMs = performance.now();
 const FRAME_BUDGET = 1000 / 75; // cap to ~75fps to ease CPU
+const currentTrig = { sinY: 0, cosY: 1, sinX: 0, cosX: 1 };
+let currentFov = 800;
+const shadeCache = new Map();
 
 // State
 let time = 0;
@@ -365,28 +373,22 @@ function rebuildBackground() {
 
 function project3D(x, y, z) {
     // Simple perspective projection
-    const baseFov = 800 * scene.zoom;
-    const scale = baseFov / (baseFov + z);
+    const scale = currentFov / (currentFov + z);
     const x2d = x * scale + width / 2;
     const y2d = y * scale + height / 2;
-    return { x: x2d, y: y2d, scale: scale, visible: z > -baseFov, z_abs: z }; 
+    return { x: x2d, y: y2d, scale: scale, visible: z > -currentFov, z_abs: z }; 
 }
 
 // 3D Transformation Pipeline: Rotate Y (Scene) -> Rotate X (Tilt)
 function transform3D(x, y, z) {
     // 1. Rotate around Y axis (Scene Rotation)
-    let radY = scene.rotationY;
-    let x1 = x * Math.cos(radY) - z * Math.sin(radY);
-    let z1 = x * Math.sin(radY) + z * Math.cos(radY);
-    let y1 = y;
+    const x1 = x * currentTrig.cosY - z * currentTrig.sinY;
+    const z1 = x * currentTrig.sinY + z * currentTrig.cosY;
 
     // 2. Rotate around X axis (Tilt)
-    let radX = scene.tiltX;
-    let y2 = y1 * Math.cos(radX) - z1 * Math.sin(radX);
-    let z2 = y1 * Math.sin(radX) + z1 * Math.cos(radX);
-    let x2 = x1;
-
-    return { x: x2, y: y2, z: z2 };
+    const y2 = y * currentTrig.cosX - z1 * currentTrig.sinX;
+    const z2 = y * currentTrig.sinX + z1 * currentTrig.cosX;
+    return { x: x1, y: y2, z: z2 };
 }
 
 // Helper for local rotations (used in signatures/objects)
@@ -409,9 +411,14 @@ function hexToRgb(hex) {
 }
 
 function shadeColor(hex, factor = 1, alpha = 1) {
+    const key = `${hex}|${factor}|${alpha}`;
+    const cached = shadeCache.get(key);
+    if (cached) return cached;
     const { r, g, b } = hexToRgb(hex);
     const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
-    return `rgba(${clamp(r * factor)}, ${clamp(g * factor)}, ${clamp(b * factor)}, ${alpha})`;
+    const val = `rgba(${clamp(r * factor)}, ${clamp(g * factor)}, ${clamp(b * factor)}, ${alpha})`;
+    shadeCache.set(key, val);
+    return val;
 }
 
 function applyTheme(theme) {
@@ -420,6 +427,7 @@ function applyTheme(theme) {
     garlandHueRange = theme.garlandHueRange;
     backgroundGradient = { inner: theme.background[0], outer: theme.background[1] };
     ribbonColor = theme.ribbonColor || COLOR_GOLD;
+    shadeCache.clear();
 
     // Update existing assets to new palette
     treeLights.forEach(l => {
@@ -1177,6 +1185,11 @@ function render(now = performance.now()) {
     } else {
         scene.rotationY += (scene.targetRotationY - scene.rotationY) * 0.1 * Math.min(1, deltaNorm);
     }
+    currentTrig.sinY = Math.sin(scene.rotationY);
+    currentTrig.cosY = Math.cos(scene.rotationY);
+    currentTrig.sinX = Math.sin(scene.tiltX);
+    currentTrig.cosX = Math.cos(scene.tiltX);
+    currentFov = 800 * scene.zoom;
     
     if (!snowRenderer) {
         particles.forEach(p => {

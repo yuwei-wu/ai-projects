@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Garden</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400&display=swap');
+
+        :root {
+            --sky: #d8e9ff;
+            --mist: #f2efe6;
+            --leaf: #7bbf9a;
+            --accent: #5fa3c8;
+            --ink: #1f3b4d;
+            --ink-muted: #5a6f7a;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(120% 120% at 20% 0%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 38%), linear-gradient(180deg, var(--sky) 0%, #e9f2ff 35%, var(--mist) 100%);
+            font-family: 'Lato', sans-serif;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Simulating a Canvas Texture overlay */
+        .canvas-texture {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.18;
+            mix-blend-mode: multiply;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 800 800'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.86);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid rgba(95, 163, 200, 0.25);
+            box-shadow: 0 12px 32px rgba(31, 59, 77, 0.12);
+        }
+
+        .tool-btn {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .tool-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 14px rgba(95, 163, 200, 0.15);
+        }
+
+        .tool-btn.active {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* Custom scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.5);
+        }
+
+        #controls {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+        }
+        
+        .hidden-controls {
+            transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #eef6ff, #f7f3ea);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease;
+        }
+        
+        .loader-text {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            color: var(--ink-muted);
+            animation: pulse 2s infinite;
+        }
+        #loader i { color: var(--accent); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Palette/Background Item Styles */
+        .option-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .option-item.active {
+            border-color: var(--accent);
+            transform: scale(1.1);
+            box-shadow: 0 6px 14px rgba(95, 163, 200, 0.3);
+        }
+        .option-item:hover {
+            transform: scale(1.05);
+        }
+        .option-label {
+            font-size: 10px;
+            text-align: center;
+            margin-top: 4px;
+            color: var(--ink-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 48px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="flex flex-col items-center">
+            <i class="fas fa-palette text-4xl text-indigo-400 mb-4"></i>
+            <span class="loader-text text-xl">Preparing Canvas...</span>
+        </div>
+    </div>
+
+    <!-- Canvas Texture Overlay -->
+    <div class="canvas-texture"></div>
+
+    <!-- Main Canvas -->
+    <canvas id="gardenCanvas"></canvas>
+
+    <!-- Top UI -->
+    <div class="absolute top-6 left-6 pointer-events-none z-10">
+        <h1 class="text-4xl font-bold text-gray-800 tracking-tight" style="font-family: 'Playfair Display', serif;">Digital Garden</h1>
+        <p class="text-sm text-gray-500 mt-2 font-medium tracking-wide">Impressionist Digital Art • <span id="flowerCount">0</span> strokes</p>
+    </div>
+    <a href="../index.html" class="absolute top-6 right-6 z-20 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200/80 text-gray-700 text-sm backdrop-blur bg-white/80 hover:bg-white hover:border-gray-400 transition pointer-events-auto">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+        Home
+    </a>
+
+    <!-- Toggle Controls -->
+    <button id="toggleControlsBtn" class="absolute bottom-6 right-6 z-20 bg-white/90 backdrop-blur text-gray-700 p-4 rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all duration-300 focus:outline-none border border-white/50">
+        <i class="fas fa-paint-brush text-xl"></i>
+    </button>
+
+    <!-- Controls Panel -->
+    <div id="controls" class="absolute bottom-0 left-0 right-0 p-4 md:p-6 flex justify-center z-10 pointer-events-none">
+        <div class="glass-panel rounded-2xl p-5 md:p-6 w-full max-w-5xl pointer-events-auto flex flex-col gap-5">
+            
+            <!-- Top Row: Tools & Actions -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-200/50 pb-4">
+                
+                <div class="flex gap-2">
+                    <button class="tool-btn active px-5 py-2.5 rounded-xl border border-gray-200/50 text-sm font-bold bg-white text-gray-600 shadow-sm" data-mode="plant">
+                        <i class="fas fa-seedling mr-2"></i>Plant
+                    </button>
+                    <button class="tool-btn px-5 py-2.5 rounded-xl border border-gray-200/50 text-sm font-bold bg-white text-gray-600 shadow-sm" data-mode="scatter">
+                        <i class="fas fa-wind mr-2"></i>Scatter
+                    </button>
+                    <button class="tool-btn px-5 py-2.5 rounded-xl border border-gray-200/50 text-sm font-bold bg-white text-gray-600 shadow-sm" data-mode="vine">
+                        <i class="fas fa-leaf mr-2"></i>Vines
+                    </button>
+                </div>
+
+                <!-- Wind Control -->
+                <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-200/50 shadow-sm" title="Wind Strength">
+                    <i class="fas fa-wind text-gray-400 text-sm"></i>
+                    <input type="range" id="windSlider" min="0" max="100" value="10" class="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                </div>
+
+                <div class="flex gap-2">
+                     <button id="undoBtn" class="tool-btn w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200/50 bg-white text-gray-600 shadow-sm" title="Undo">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="clearBtn" class="tool-btn px-4 py-2 rounded-xl border border-red-100 text-sm font-bold bg-white text-red-500 shadow-sm hover:bg-red-50" title="Clear Canvas">
+                        <i class="fas fa-eraser mr-2"></i>Clear
+                    </button>
+                    <button id="saveBtn" class="tool-btn px-4 py-2 rounded-xl border border-gray-200/50 text-sm font-bold bg-white text-gray-600 shadow-sm" title="Save Masterpiece">
+                        <i class="fas fa-camera mr-2"></i>Save
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Creative Options -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Flower Style -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Flora</label>
+                    <div class="flex gap-2 overflow-x-auto custom-scroll pb-2">
+                        <!-- Water Lily -->
+                        <button class="style-btn active option-item bg-teal-50" data-style="waterlily" title="Water Lily">
+                            <div class="w-full h-full flex items-center justify-center text-teal-600"><i class="fas fa-water"></i></div>
+                        </button>
+                        <!-- Poppy -->
+                        <button class="style-btn option-item bg-red-50" data-style="poppy" title="Wild Poppy">
+                            <div class="w-full h-full flex items-center justify-center text-red-500"><i class="fas fa-fan"></i></div>
+                        </button>
+                        <!-- Iris -->
+                        <button class="style-btn option-item bg-purple-50" data-style="iris" title="Iris">
+                            <div class="w-full h-full flex items-center justify-center text-purple-600"><i class="fas fa-spa"></i></div>
+                        </button>
+                        <!-- Sunflower -->
+                        <button class="style-btn option-item bg-yellow-50" data-style="sunflower" title="Sunflower">
+                            <div class="w-full h-full flex items-center justify-center text-yellow-600"><i class="fas fa-sun"></i></div>
+                        </button>
+                         <!-- Wisteria -->
+                        <button class="style-btn option-item bg-indigo-50" data-style="wisteria" title="Wisteria">
+                            <div class="w-full h-full flex items-center justify-center text-indigo-500"><i class="fas fa-grapes"></i></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Palette -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Palette</label>
+                    <div class="flex gap-3 overflow-x-auto custom-scroll pb-2" id="paletteContainer">
+                        <!-- JS Generated -->
+                    </div>
+                </div>
+
+                <!-- Background -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Atmosphere</label>
+                    <div class="flex gap-3 overflow-x-auto custom-scroll pb-2" id="backgroundContainer">
+                        <!-- JS Generated -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gardenCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let backgroundFill = null;
+        let vignetteFill = null;
+        let backgroundKey = '';
+
+        const palettes = {
+            giverny: {
+                colors: [
+                    {h: 220, s: 60, l: 70}, // Periwinkle
+                    {h: 280, s: 50, l: 75}, // Lilac
+                    {h: 160, s: 40, l: 60}, // Sage
+                    {h: 340, s: 70, l: 80}, // Pale Pink
+                    {h: 200, s: 60, l: 60}  // Soft Blue
+                ],
+                label: 'Giverny'
+            },
+            sunrise: {
+                colors: [
+                    {h: 210, s: 30, l: 60}, // Fog Blue
+                    {h: 25, s: 90, l: 65},  // Sun Orange
+                    {h: 190, s: 20, l: 80}, // Mist
+                    {h: 350, s: 60, l: 70}  // Dawn Red
+                ],
+                label: 'Sunrise'
+            },
+            haystacks: {
+                colors: [
+                    {h: 40, s: 80, l: 70},  // Gold
+                    {h: 25, s: 70, l: 55},  // Russet
+                    {h: 260, s: 40, l: 70}, // Shadow Violet
+                    {h: 80, s: 40, l: 75}   // Field Green
+                ],
+                label: 'Harvest'
+            },
+            waterlilies: {
+                colors: [
+                    {h: 180, s: 50, l: 40}, // Deep Pond
+                    {h: 300, s: 40, l: 75}, // Pink Lily
+                    {h: 60, s: 30, l: 80},  // Reflection
+                    {h: 140, s: 40, l: 30}  // Dark Leaf
+                ],
+                label: 'Pond'
+            }
+        };
+
+        const backgrounds = {
+            sunrise: { 
+                type: 'gradient', 
+                colors: ['#7D8B98', '#D68C72'], 
+                stops: [0, 1],
+                label: 'Impression' 
+            },
+            pond: { 
+                type: 'gradient', 
+                colors: ['#2F4F4F', '#5F9EA0'], 
+                stops: [0.2, 1],
+                label: 'The Pond' 
+            },
+            rouen: { 
+                type: 'gradient', 
+                colors: ['#F5F5DC', '#B0C4DE'], 
+                stops: [0.3, 1],
+                label: 'Cathedral' 
+            },
+            venice: { 
+                type: 'gradient', 
+                colors: ['#E0C0B0', '#7090A0'], 
+                stops: [0.1, 0.9],
+                label: 'Twilight' 
+            },
+            meadow: {
+                type: 'gradient',
+                colors: ['#8FBC8F', '#F0E68C'],
+                stops: [0, 1],
+                label: 'Meadow'
+            },
+            canvas: {
+                type: 'color',
+                value: '#F0F0E8',
+                label: 'Blank'
+            }
+        };
+
+        const state = {
+            mode: 'plant',
+            style: 'waterlily',
+            palette: 'giverny',
+            bg: 'pond',
+            flowers: [],
+            isDragging: false,
+            lastX: 0,
+            lastY: 0,
+            time: 0,
+            windIntensity: 0.1
+        };
+
+        // --- Helper: Impressionist Brush ---
+        function brushStroke(ctx, x, y, width, height, colorHsl, angle, roughness = 1) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle + (Math.random() - 0.5) * 0.08);
+            
+            const numStrokes = 4 + Math.random() * 3;
+            
+            for(let i=0; i<numStrokes; i++) {
+                const h = colorHsl.h + (Math.random() - 0.5) * 18;
+                const s = colorHsl.s + (Math.random() - 0.5) * 14;
+                const l = colorHsl.l + (Math.random() - 0.5) * 14;
+                const a = 0.5 + Math.random() * 0.35;
+                
+                const dx = (Math.random() - 0.5) * width * 0.6 * roughness;
+                const dy = (Math.random() - 0.5) * height * 0.6 * roughness;
+                const dw = width * (0.7 + Math.random() * 0.5);
+                const dh = height * (0.7 + Math.random() * 0.5);
+
+                // Base soft stroke
+                ctx.fillStyle = `hsla(${h}, ${s}%, ${l}%, ${a})`;
+                ctx.filter = 'blur(0.35px)';
+                ctx.beginPath();
+                ctx.ellipse(dx, dy, dw/2, dh/2, Math.random()*0.3, 0, Math.PI*2);
+                ctx.fill();
+                ctx.filter = 'none';
+
+                // Dry texture edge
+                ctx.globalAlpha = a * 0.6;
+                ctx.strokeStyle = `hsla(${h}, ${s * 0.9}%, ${l * 0.9}%, ${a * 0.9})`;
+                ctx.lineWidth = Math.max(0.6, Math.min(dw, dh) * 0.05);
+                ctx.setLineDash([Math.random()*3 + 2, Math.random()*4 + 2]);
+                ctx.beginPath();
+                ctx.ellipse(dx, dy, dw/2, dh/2, 0, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 1;
+            }
+            ctx.restore();
+        }
+
+        class ImpressionistFlower {
+            constructor(x, y, style, paletteKey) {
+                this.x = x;
+                this.y = y;
+                this.style = style;
+                this.palette = palettes[paletteKey].colors;
+                
+                const base = this.palette[Math.floor(Math.random() * this.palette.length)];
+                this.hue = base.h + (Math.random()*20 - 10);
+                this.sat = base.s;
+                this.light = base.l;
+
+                this.growth = 0;
+                this.maxSize = 30 + Math.random() * 50;
+                
+                // Morphology
+                this.petalCount = style === 'waterlily' ? 12 : 
+                                  style === 'poppy' ? 4 :
+                                  style === 'iris' ? 3 :
+                                  style === 'sunflower' ? 20 : 5;
+                                  
+                this.rotation = Math.random() * Math.PI * 2;
+                this.wobbleOffset = Math.random() * 100;
+                
+                // --- Caching Strategy ---
+                // We create an offscreen canvas for THIS individual flower.
+                // We paint the jittery impressionist strokes ONCE onto this canvas.
+                // In the main loop, we just draw this canvas. This stops the flickering.
+                this.cacheCanvas = document.createElement('canvas');
+                this.cacheCtx = this.cacheCanvas.getContext('2d');
+                this.isCached = false;
+            }
+
+            cacheVisuals() {
+                // Determine size needed (pad with plenty of space for stems/leaves)
+                // Wisteria needs tall canvas, Waterlily needs wide.
+                const bounds = this.maxSize * 4; 
+                this.cacheCanvas.width = bounds;
+                this.cacheCanvas.height = bounds;
+                
+                // Center the context
+                this.cacheCtx.translate(bounds/2, bounds/2);
+
+                // Draw the flower static pose
+                // Note: We don't pass 'time' or wind here. Just the raw shape.
+                if (this.style === 'waterlily') this.drawWaterLilyStatic(this.cacheCtx, this.maxSize);
+                else if (this.style === 'poppy') this.drawPoppyStatic(this.cacheCtx, this.maxSize);
+                else if (this.style === 'iris') this.drawIrisStatic(this.cacheCtx, this.maxSize);
+                else if (this.style === 'sunflower') this.drawSunflowerStatic(this.cacheCtx, this.maxSize);
+                else if (this.style === 'wisteria') this.drawWisteriaStatic(this.cacheCtx, this.maxSize);
+                
+                this.isCached = true;
+            }
+
+            update() {
+                if (this.growth < 1) {
+                    this.growth += (1 - this.growth) * 0.04;
+                }
+                if (!this.isCached && this.growth > 0.01) {
+                    this.cacheVisuals();
+                }
+            }
+
+            draw(ctx, time) {
+                if (!this.isCached) return;
+
+                const s = this.growth;
+                if (s < 0.01) return;
+
+                // Gentle Wind Sway (Rotates the entire cached image)
+                // Much slower frequency for gentle drift
+                const freq = 0.00005 + (state.windIntensity * 0.001);
+                const amp = 0.002 + (state.windIntensity * 0.05);
+                
+                const wobble = Math.sin(time * freq + this.wobbleOffset) * amp;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.scale(s, s); // Grow effect
+                ctx.rotate(this.rotation + wobble);
+
+                // Draw cached image centered
+                const offset = this.cacheCanvas.width / 2;
+                ctx.drawImage(this.cacheCanvas, -offset, -offset);
+
+                ctx.restore();
+            }
+
+            // --- Static Draw Functions (Run Once per Flower) ---
+
+            drawWaterLilyStatic(ctx, size) {
+                const padW = size * 1.5;
+                const padH = size * 0.6;
+                
+                // Shadow
+                brushStroke(ctx, 5, 10, padW, padH, {h:200, s:40, l:30}, 0, 0.2);
+                // Pad
+                brushStroke(ctx, 0, 0, padW, padH, {h:100, s:35, l:40}, 0, 0.1);
+                
+                // Flower
+                ctx.save();
+                ctx.translate(0, -size * 0.1);
+                for(let i=0; i<this.petalCount; i++) {
+                    const angle = (Math.PI * 2 * i) / this.petalCount;
+                    const len = size * 0.5;
+                    const wid = size * 0.15;
+                    brushStroke(ctx, Math.cos(angle)*len*0.5, Math.sin(angle)*len*0.5, len, wid, 
+                                {h:this.hue, s:this.sat, l:this.light}, angle);
+                }
+                // Center
+                brushStroke(ctx, 0, 0, size*0.3, size*0.3, {h:50, s:80, l:60}, 0);
+                ctx.restore();
+            }
+
+            drawPoppyStatic(ctx, size) {
+                // Stem
+                ctx.save();
+                // Draw stem "down" relative to unrotated canvas
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                // Wobbly stem
+                ctx.bezierCurveTo(5, size, -5, size * 2, 0, size * 3);
+                ctx.strokeStyle = `hsla(100, 30%, 40%, 0.5)`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+
+                // Petals
+                for(let i=0; i<4; i++) {
+                    const angle = (Math.PI*2 * i)/4;
+                    const dist = size * 0.2;
+                    brushStroke(ctx, Math.cos(angle)*dist, Math.sin(angle)*dist, size, size*0.8,
+                                {h:this.hue, s:this.sat, l:this.light}, angle + Math.random()*0.5, 0.5);
+                }
+                // Center
+                brushStroke(ctx, 0, 0, size*0.3, size*0.3, {h:280, s:80, l:10}, 0);
+            }
+
+            drawIrisStatic(ctx, size) {
+                 // Stem
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(0,0);
+                ctx.lineTo(0, size*3.5);
+                ctx.strokeStyle = `hsla(120, 30%, 40%, 0.5)`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+
+                // Upright
+                for(let i=0; i<3; i++) {
+                     brushStroke(ctx, (i-1)*size*0.3, -size*0.4, size*0.3, size*0.8, 
+                                {h:this.hue, s:this.sat, l:this.light}, 0);
+                }
+                // Falls
+                for(let i=0; i<3; i++) {
+                    const angle = (Math.PI*2*i)/3 + Math.PI/6;
+                    brushStroke(ctx, Math.cos(angle)*size*0.4, Math.sin(angle)*size*0.4, size*0.4, size*0.6,
+                               {h:this.hue, s:this.sat, l:this.light - 10}, angle);
+                }
+                // Beard
+                brushStroke(ctx, 0, 0, size*0.2, size*0.4, {h:50, s:90, l:60}, 0);
+            }
+
+            drawSunflowerStatic(ctx, size) {
+                 // Center
+                brushStroke(ctx, 0, 0, size*0.6, size*0.6, {h:25, s:60, l:25}, 0, 0.2);
+                
+                // Petals
+                const count = 16;
+                for(let i=0; i<count; i++) {
+                    const angle = (Math.PI*2*i)/count;
+                    brushStroke(ctx, Math.cos(angle)*size*0.5, Math.sin(angle)*size*0.5, size*0.6, size*0.2,
+                                {h:this.hue, s:this.sat, l:this.light}, angle);
+                }
+            }
+
+            drawWisteriaStatic(ctx, size) {
+                // Clusters hang down. We draw them pointing "down" in y.
+                const drops = 5;
+                for(let i=0; i<drops; i++) {
+                    const len = size * 2.5 + Math.random()*size;
+                    const xOff = (i - drops/2) * size * 0.3;
+                    
+                    for(let j=0; j<12; j++) {
+                        const yPos = (j/10) * len;
+                        const width = size * 0.3 * (1 - j/12);
+                        // Slight static curve
+                        const curve = Math.sin(j) * 5;
+                        
+                        brushStroke(ctx, xOff + curve, yPos, width, width,
+                                    {h:this.hue + j*5, s:this.sat, l:this.light + j*2}, 0);
+                    }
+                }
+            }
+        }
+
+        // --- Logic ---
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            rebuildBackgroundCache();
+        }
+
+        function buildUI() {
+            const pCont = document.getElementById('paletteContainer');
+            Object.entries(palettes).forEach(([key, p]) => {
+                const tile = document.createElement('div');
+                tile.className = `option-item ${state.palette === key ? 'active' : ''}`;
+                const grad = `linear-gradient(135deg, 
+                    hsl(${p.colors[0].h},${p.colors[0].s}%,${p.colors[0].l}%) 0%, 
+                    hsl(${p.colors[1].h},${p.colors[1].s}%,${p.colors[1].l}%) 100%)`;
+                const swatch = document.createElement('div');
+                swatch.style.width = '100%';
+                swatch.style.height = '100%';
+                swatch.style.background = grad;
+                tile.appendChild(swatch);
+                tile.onclick = () => {
+                    state.palette = key;
+                    updateActive(pCont, tile);
+                };
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex flex-col items-center';
+                wrapper.appendChild(tile);
+                const label = document.createElement('span');
+                label.className = 'option-label';
+                label.textContent = p.label;
+                wrapper.appendChild(label);
+                pCont.appendChild(wrapper);
+            });
+
+            const bCont = document.getElementById('backgroundContainer');
+            Object.entries(backgrounds).forEach(([key, bg]) => {
+                const tile = document.createElement('div');
+                tile.className = `option-item ${state.bg === key ? 'active' : ''}`;
+                if(bg.type === 'gradient') {
+                    tile.style.background = `linear-gradient(to bottom right, ${bg.colors[0]}, ${bg.colors[1]})`;
+                } else {
+                    tile.style.backgroundColor = bg.value;
+                }
+                tile.onclick = () => {
+                    state.bg = key;
+                    updateActive(bCont, tile);
+                    rebuildBackgroundCache();
+                };
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex flex-col items-center';
+                wrapper.appendChild(tile);
+                const label = document.createElement('span');
+                label.className = 'option-label';
+                label.textContent = bg.label;
+                wrapper.appendChild(label);
+                bCont.appendChild(wrapper);
+            });
+        }
+
+        function updateActive(container, activeDiv) {
+            const wrappers = container.children;
+            for(let w of wrappers) {
+                w.firstElementChild.classList.remove('active');
+            }
+            activeDiv.classList.add('active');
+        }
+
+        function rebuildBackgroundCache() {
+            const bg = backgrounds[state.bg];
+            const key = `${state.bg}|${width}x${height}`;
+            if (key === backgroundKey && backgroundFill && vignetteFill) return;
+            backgroundKey = key;
+
+            if(bg.type === 'color') {
+                backgroundFill = bg.value;
+            } else {
+                const grad = ctx.createLinearGradient(0, 0, width, height);
+                bg.colors.forEach((c, i) => grad.addColorStop(bg.stops[i], c));
+                backgroundFill = grad;
+            }
+            const vignette = ctx.createRadialGradient(width/2, height/2, Math.min(width,height)*0.2, width/2, height/2, Math.max(width,height)*0.8);
+            vignette.addColorStop(0, 'rgba(255,255,255,0.02)');
+            vignette.addColorStop(1, 'rgba(31,59,77,0.15)');
+            vignetteFill = vignette;
+        }
+
+        function drawBackground() {
+            if (!backgroundFill || !vignetteFill) rebuildBackgroundCache();
+            ctx.fillStyle = backgroundFill;
+            ctx.fillRect(0,0,width,height);
+            ctx.fillStyle = vignetteFill;
+            ctx.fillRect(0,0,width,height);
+        }
+
+        function handleInteraction(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (state.mode === 'plant') {
+                if(e.type === 'pointerdown') {
+                    state.flowers.push(new ImpressionistFlower(x, y, state.style, state.palette));
+                }
+            } else if (state.mode === 'scatter') {
+                if(e.buttons === 1 && Math.random() > 0.8) {
+                    const f = new ImpressionistFlower(x + (Math.random()-0.5)*50, y + (Math.random()-0.5)*50, state.style, state.palette);
+                    f.maxSize *= 0.6; 
+                    state.flowers.push(f);
+                }
+            } else if (state.mode === 'vine') {
+                if(e.buttons === 1 && Math.hypot(x - state.lastX, y - state.lastY) > 15) {
+                    const f = new ImpressionistFlower(x, y, 'wisteria', state.palette);
+                    f.maxSize = 10 + Math.random()*10;
+                    state.flowers.push(f);
+                }
+            }
+            
+            state.lastX = x;
+            state.lastY = y;
+            document.getElementById('flowerCount').innerText = state.flowers.length;
+        }
+
+        function animate(t) {
+            state.time = t;
+            drawBackground();
+
+            state.flowers.sort((a,b) => a.y - b.y);
+
+            state.flowers.forEach(f => {
+                f.update();
+                f.draw(ctx, t);
+            });
+            requestAnimationFrame(animate);
+        }
+
+        window.onload = () => {
+            resize();
+            buildUI();
+            
+            document.querySelectorAll('[data-mode]').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active', 'bg-indigo-50', 'text-indigo-600'));
+                    btn.classList.add('active');
+                    state.mode = btn.dataset.mode;
+                }
+            });
+
+            document.querySelectorAll('[data-style]').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('[data-style]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.style = btn.dataset.style;
+                }
+            });
+
+            document.getElementById('clearBtn').onclick = () => {
+                state.flowers = [];
+                document.getElementById('flowerCount').innerText = 0;
+            };
+            document.getElementById('undoBtn').onclick = () => {
+                state.flowers.pop();
+                document.getElementById('flowerCount').innerText = state.flowers.length;
+            };
+            
+            const windSlider = document.getElementById('windSlider');
+            windSlider.oninput = (e) => {
+                state.windIntensity = parseInt(e.target.value) / 100;
+            };
+
+            document.getElementById('saveBtn').onclick = () => {
+                const link = document.createElement('a');
+                link.download = 'monet-masterpiece.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            };
+            
+            document.getElementById('toggleControlsBtn').onclick = () => {
+                const c = document.getElementById('controls');
+                if(c.classList.contains('hidden-controls')) c.classList.remove('hidden-controls');
+                else c.classList.add('hidden-controls');
+            };
+
+            window.addEventListener('resize', resize);
+            canvas.addEventListener('pointerdown', (e) => {
+                state.isDragging = true;
+                handleInteraction(e);
+            });
+            window.addEventListener('pointerup', () => state.isDragging = false);
+            canvas.addEventListener('pointermove', (e) => {
+                if(state.isDragging) handleInteraction(e);
+            });
+
+            requestAnimationFrame(animate);
+            setTimeout(() => {
+                 document.getElementById('loader').style.opacity = 0;
+                 setTimeout(()=> document.getElementById('loader').style.display='none', 800);
+                 
+                 state.flowers.push(new ImpressionistFlower(width/2, height/2 + 50, 'waterlily', 'giverny'));
+                 document.getElementById('flowerCount').innerText = 1;
+            }, 1500);
+        };
+    </script>
+</body>
+</html>

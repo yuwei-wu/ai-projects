@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Academic Writing</title>
+    <title>Latex Tools</title>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -11,7 +11,7 @@
     
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -23,37 +23,36 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&family=Inter:wght@400;600&display=swap');
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --muted: #475569;
+            --border: #e5e7eb;
+            --accent-50: #eef2ff;
+            --accent-100: #dbeafe;
+            --accent-200: #a7c9f1;
+            --accent-500: #3b82f6;
+            --accent-600: #2563eb;
+            --accent-800: #1e3a8a;
+        }
         body {
-            background-color: #0f172a; /* Slate 900 */
-            color: #e2e8f0; /* Slate 200 */
+            background: var(--bg);
+            color: var(--text);
             overflow-x: hidden;
             overflow-y: auto;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e293b; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #475569; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b; 
-        }
-        
         .katex-display {
             margin: 0 !important;
         }
         textarea:focus {
             outline: none;
-            box-shadow: 0 0 0 2px #3b82f6;
+            box-shadow: 0 0 0 2px var(--accent-200);
         }
         .preview-box {
-            background-image: radial-gradient(#334155 1px, transparent 1px);
+            background-image: radial-gradient(var(--accent-100) 1px, transparent 1px);
             background-size: 20px 20px;
         }
         header .flex.items-center.justify-between {
@@ -66,12 +65,29 @@
                 height: auto;
                 gap: 0.75rem;
             }
-            header .flex.bg-slate-800 {
-                width: 100%;
-                justify-content: space-between;
-            }
             main { padding: 1rem !important; }
         }
+        ::selection {
+            background: var(--accent-200);
+            color: var(--text);
+        }
+        /* Palette overrides for Tailwind utility classes to keep colors centralized */
+        .bg-blue-50 { background-color: var(--accent-50) !important; }
+        .bg-blue-100 { background-color: var(--accent-100) !important; }
+        .bg-blue-200 { background-color: var(--accent-200) !important; }
+        .bg-blue-500 { background-color: var(--accent-500) !important; }
+        .bg-blue-600 { background-color: var(--accent-600) !important; }
+        .bg-blue-800 { background-color: var(--accent-800) !important; }
+        .text-blue-800 { color: var(--accent-800) !important; }
+        .border-blue-200 { border-color: var(--accent-200) !important; }
+        .border-blue-500 { border-color: var(--accent-500) !important; }
+        .border-blue-600 { border-color: var(--accent-600) !important; }
+        .focus\:border-blue-500:focus { border-color: var(--accent-500) !important; }
+        .hover\:bg-blue-100:hover { background-color: var(--accent-100) !important; }
+        .hover\:bg-blue-200:hover { background-color: var(--accent-200) !important; }
+        .hover\:bg-blue-500:hover { background-color: var(--accent-500) !important; }
+        .hover\:bg-blue-600:hover { background-color: var(--accent-600) !important; }
+        .selection\:bg-blue-200\/50::selection { background-color: rgba(191, 219, 254, 0.274) !important; }
     </style>
 </head>
 <body>
@@ -91,14 +107,28 @@
             { id: 'delta', command: '\\delta', category: 'Greek', keywords: ['d', 'change', 'lower'] },
             { id: 'epsilon', command: '\\epsilon', category: 'Greek', keywords: ['e', 'lower'] },
             { id: 'varepsilon', command: '\\varepsilon', category: 'Greek', keywords: ['e', 'variant', 'lower'] },
+            { id: 'zeta', command: '\\zeta', category: 'Greek', keywords: ['z', 'lower'] },
+            { id: 'eta', command: '\\eta', category: 'Greek', keywords: ['h', 'lower'] },
             { id: 'theta', command: '\\theta', category: 'Greek', keywords: ['th', 'angle', 'lower'] },
+            { id: 'vartheta', command: '\\vartheta', category: 'Greek', keywords: ['th', 'variant', 'angle', 'lower'] },
+            { id: 'iota', command: '\\iota', category: 'Greek', keywords: ['i', 'lower'] },
+            { id: 'kappa', command: '\\kappa', category: 'Greek', keywords: ['k', 'lower'] },
             { id: 'lambda', command: '\\lambda', category: 'Greek', keywords: ['l', 'lower'] },
             { id: 'mu', command: '\\mu', category: 'Greek', keywords: ['m', 'micro', 'lower'] },
+            { id: 'nu', command: '\\nu', category: 'Greek', keywords: ['n', 'lower'] },
+            { id: 'xi', command: '\\xi', category: 'Greek', keywords: ['x', 'lower'] },
             { id: 'pi', command: '\\pi', category: 'Greek', keywords: ['p', 'circle', 'lower'] },
+            { id: 'rho', command: '\\rho', category: 'Greek', keywords: ['r', 'lower'] },
+            { id: 'varrho', command: '\\varrho', category: 'Greek', keywords: ['r', 'variant', 'lower'] },
             { id: 'sigma', command: '\\sigma', category: 'Greek', keywords: ['s', 'sum', 'lower'] },
             { id: 'phi', command: '\\phi', category: 'Greek', keywords: ['f', 'golden', 'lower'] },
+            { id: 'varphi', command: '\\varphi', category: 'Greek', keywords: ['f', 'variant', 'lower'] },
             { id: 'psi', command: '\\psi', category: 'Greek', keywords: ['ps', 'wave', 'lower'] },
             { id: 'omega', command: '\\omega', category: 'Greek', keywords: ['o', 'w', 'lower'] },
+            { id: 'varsigma', command: '\\varsigma', category: 'Greek', keywords: ['s', 'terminal', 'lower'] },
+            { id: 'tau', command: '\\tau', category: 'Greek', keywords: ['t', 'lower'] },
+            { id: 'upsilon', command: '\\upsilon', category: 'Greek', keywords: ['u', 'y', 'lower'] },
+            { id: 'chi', command: '\\chi', category: 'Greek', keywords: ['x', 'chi', 'lower'] },
             { id: 'Gamma', command: '\\Gamma', category: 'Greek', keywords: ['G', 'upper'] },
             { id: 'Delta', command: '\\Delta', category: 'Greek', keywords: ['D', 'upper', 'change'] },
             { id: 'Theta', command: '\\Theta', category: 'Greek', keywords: ['TH', 'upper'] },
@@ -107,6 +137,17 @@
             { id: 'Sigma', command: '\\Sigma', category: 'Greek', keywords: ['S', 'summation', 'upper'] },
             { id: 'Phi', command: '\\Phi', category: 'Greek', keywords: ['F', 'upper'] },
             { id: 'Omega', command: '\\Omega', category: 'Greek', keywords: ['O', 'ohms', 'upper'] },
+            { id: 'Epsilon', command: '\\Epsilon', category: 'Greek', keywords: ['E', 'upper'] },
+            { id: 'Zeta', command: '\\Zeta', category: 'Greek', keywords: ['Z', 'upper'] },
+            { id: 'Eta', command: '\\Eta', category: 'Greek', keywords: ['H', 'upper'] },
+            { id: 'Iota', command: '\\Iota', category: 'Greek', keywords: ['I', 'upper'] },
+            { id: 'Kappa', command: '\\Kappa', category: 'Greek', keywords: ['K', 'upper'] },
+            { id: 'Nu', command: '\\Nu', category: 'Greek', keywords: ['N', 'upper'] },
+            { id: 'Xi', command: '\\Xi', category: 'Greek', keywords: ['X', 'upper'] },
+            { id: 'Rho', command: '\\Rho', category: 'Greek', keywords: ['R', 'upper'] },
+            { id: 'Tau', command: '\\Tau', category: 'Greek', keywords: ['T', 'upper'] },
+            { id: 'Upsilon', command: '\\Upsilon', category: 'Greek', keywords: ['U', 'Y', 'upper'] },
+            { id: 'Chi', command: '\\Chi', category: 'Greek', keywords: ['X', 'upper'] },
 
             // Operators & Big Ops
             { id: 'times', command: '\\times', category: 'Operators', keywords: ['multiply', 'cross', 'x'] },
@@ -121,6 +162,13 @@
             { id: 'sqrt', command: '\\sqrt{x}', copy: '\\sqrt{}', category: 'Operators', keywords: ['square', 'root'] },
             { id: 'lim', command: '\\lim_{x \\to 0}', copy: '\\lim_{ \\to }', category: 'Operators', keywords: ['limit'] },
 
+            // Matrices & Structures
+            { id: 'matrix', command: '\\begin{matrix} a & b \\\\ c & d \\end{matrix}', copy: '\\begin{matrix}  &  \\\\\\\\  &  \\end{matrix}', category: 'Matrices', keywords: ['plain', 'matrix'] },
+            { id: 'pmatrix', command: '\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}', copy: '\\begin{pmatrix}  &  \\\\\\\\  &  \\end{pmatrix}', category: 'Matrices', keywords: ['paren', 'matrix'] },
+            { id: 'bmatrix', command: '\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}', copy: '\\begin{bmatrix}  &  \\\\\\\\  &  \\end{bmatrix}', category: 'Matrices', keywords: ['bracket', 'matrix'] },
+            { id: 'vmatrix', command: '\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}', copy: '\\begin{vmatrix}  &  \\\\\\\\  &  \\end{vmatrix}', category: 'Matrices', keywords: ['determinant', 'matrix'] },
+            { id: 'smallmatrix', command: '\\begin{smallmatrix} a & b \\\\ c & d \\end{smallmatrix}', copy: '\\begin{smallmatrix}  &  \\\\\\\\  &  \\end{smallmatrix}', category: 'Matrices', keywords: ['inline', 'matrix'] },
+
             // Relations
             { id: 'leq', command: '\\leq', category: 'Relations', keywords: ['less', 'equal'] },
             { id: 'geq', command: '\\geq', category: 'Relations', keywords: ['greater', 'equal'] },
@@ -129,6 +177,9 @@
             { id: 'equiv', command: '\\equiv', category: 'Relations', keywords: ['equivalent'] },
             { id: 'sim', command: '\\sim', category: 'Relations', keywords: ['similar'] },
             { id: 'subset', command: '\\subset', category: 'Relations', keywords: ['set', 'contained'] },
+            { id: 'subseteq', command: '\\subseteq', category: 'Relations', keywords: ['subset', 'equal'] },
+            { id: 'supset', command: '\\supset', category: 'Relations', keywords: ['superset'] },
+            { id: 'supseteq', command: '\\supseteq', category: 'Relations', keywords: ['superset', 'equal'] },
             { id: 'in', command: '\\in', category: 'Relations', keywords: ['element', 'set'] },
             { id: 'notin', command: '\\notin', category: 'Relations', keywords: ['not', 'element'] },
 
@@ -149,6 +200,15 @@
             { id: 'angle', command: '\\angle', category: 'Misc', keywords: ['geometry'] },
             { id: 'therefore', command: '\\therefore', category: 'Logic', keywords: ['conclusion'] },
             { id: 'emptyset', command: '\\emptyset', category: 'Logic', keywords: ['null', 'set'] },
+            { id: 'cdots', command: '\\cdots', category: 'Misc', keywords: ['dots', 'ellipsis', 'center'] },
+            { id: 'ldots', command: '\\ldots', category: 'Misc', keywords: ['dots', 'ellipsis', 'lower'] },
+
+            // Sets & Blackboard
+            { id: 'mathbbR', command: '\\mathbb{R}', category: 'Sets', keywords: ['real', 'reals', 'blackboard'] },
+            { id: 'mathbbN', command: '\\mathbb{N}', category: 'Sets', keywords: ['natural', 'naturals', 'blackboard'] },
+            { id: 'mathbbZ', command: '\\mathbb{Z}', category: 'Sets', keywords: ['integer', 'integers', 'blackboard'] },
+            { id: 'mathbbQ', command: '\\mathbb{Q}', category: 'Sets', keywords: ['rational', 'rationals', 'blackboard'] },
+            { id: 'mathbbC', command: '\\mathbb{C}', category: 'Sets', keywords: ['complex', 'complexes', 'blackboard'] },
             
             // Accents
             { id: 'hat', command: '\\hat{a}', copy: '\\hat{}', category: 'Accents', keywords: ['unit', 'vector'] },
@@ -161,6 +221,10 @@
             { id: 'rb', command: '\\}', category: 'Delimiters', keywords: ['brace', 'curly'] },
             { id: 'langle', command: '\\langle', category: 'Delimiters', keywords: ['angle', 'bracket'] },
             { id: 'rangle', command: '\\rangle', category: 'Delimiters', keywords: ['angle', 'bracket'] },
+            { id: 'lceil', command: '\\lceil', category: 'Delimiters', keywords: ['ceil', 'ceiling'] },
+            { id: 'rceil', command: '\\rceil', category: 'Delimiters', keywords: ['ceil', 'ceiling'] },
+            { id: 'lfloor', command: '\\lfloor', category: 'Delimiters', keywords: ['floor'] },
+            { id: 'rfloor', command: '\\rfloor', category: 'Delimiters', keywords: ['floor'] },
             { id: 'ell', command: '\\ell', category: 'Misc', keywords: ['l', 'cursive'] },
             { id: 'hbar', command: '\\hbar', category: 'Misc', keywords: ['h', 'physics'] },
         ];
@@ -193,20 +257,26 @@
         // COMPONENTS
         // ==========================================
 
-        const LatexRenderer = ({ latex, className = "" }) => {
+        const LatexRenderer = ({ latex, className = "", displayMode = true, style = {} }) => {
             const containerRef = useRef(null);
             useEffect(() => {
                 if (containerRef.current && window.katex) {
                     try {
                         window.katex.render(latex, containerRef.current, {
                             throwOnError: false,
-                            displayMode: true, 
+                            displayMode, 
                             output: 'html'
                         });
                     } catch (e) {}
                 }
             }, [latex]);
-            return <div ref={containerRef} className={`text-xl ${className}`} />;
+            return (
+                <div
+                    ref={containerRef}
+                    className={`text-xl ${className}`}
+                    style={{ maxWidth: '100%', maxHeight: '100%', overflow: 'hidden', ...style }}
+                />
+            );
         };
 
         const Toast = ({ message }) => (
@@ -259,20 +329,22 @@
                     {/* Editor & Preview */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">LaTeX Source</label>
+                            <label className="text-xs font-bold text-blue-800 uppercase tracking-wider">LaTeX Source</label>
                             <textarea
                                 ref={textareaRef}
                                 value={latexInput}
                                 onChange={(e) => setLatexInput(e.target.value)}
-                                className="w-full h-40 bg-slate-800 text-slate-100 font-mono text-base p-4 rounded-lg border border-slate-700 resize-none placeholder-slate-500 focus:border-blue-500 transition-colors"
+                                className="w-full h-40 bg-white text-stone-800 font-mono text-base p-4 rounded-lg border border-stone-300 shadow-inner resize-none placeholder-stone-400 focus:border-blue-500 transition-colors"
                                 placeholder="Type LaTeX here..."
                                 spellCheck="false"
                             />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Preview</label>
-                            <div className="w-full h-40 bg-slate-200 text-slate-900 rounded-lg border border-slate-700 flex items-center justify-center p-4 overflow-auto preview-box">
-                                {latexInput.trim() ? <LatexRenderer latex={latexInput} /> : <span className="text-slate-400 italic">Preview...</span>}
+                            <label className="text-xs font-bold text-blue-800 uppercase tracking-wider">Live Preview</label>
+                            <div className="w-full h-40 bg-blue-20 text-stone-900 
+                            rounded-lg border border-blue-200 flex items-center justify-center p-4 overflow-auto preview-box shadow-inner">
+                                {latexInput.trim() ? <LatexRenderer latex={latexInput} /> : 
+                                <span className="text-stone-400 italic">Preview...</span>}
                             </div>
                         </div>
                     </div>
@@ -284,7 +356,7 @@
                                 <button 
                                     key={t.label}
                                     onClick={() => handleInsert(t.code)}
-                                    className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-xs text-slate-300 rounded border border-slate-600 font-medium"
+                                    className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-xs text-blue-800 rounded border border-blue-200 font-medium"
                                 >
                                     + {t.label}
                                 </button>
@@ -292,19 +364,19 @@
                         </div>
                         <button 
                             onClick={() => copyToClipboard(latexInput, showToast)}
-                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm flex items-center gap-2 shadow-sm"
                         >
                             Copy Source
                         </button>
                     </div>
 
                     {/* Toolbar */}
-                    <div className="bg-slate-800 border-t border-slate-700 flex-1 -mx-4 px-4 pt-4">
-                        <div className="flex flex-col md:flex-row gap-4 mb-4">
+                    <div className="bg-white border-t border-stone-200 flex-1 -mx-2 px-2 pt-3 rounded-b-xl shadow-inner">
+                        <div className="flex flex-col md:flex-row gap-3 mb-3">
                             <input
                                 type="text"
                                 placeholder="Search symbols..."
-                                className="bg-slate-900 text-white border border-slate-600 rounded-lg py-1.5 px-3 focus:outline-none focus:border-blue-500 text-sm w-full md:w-64"
+                                className="bg-white text-stone-800 border border-stone-300 rounded-lg py-1 px-2.5 focus:outline-none focus:border-blue-500 text-sm w-full md:w-56 shadow-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -313,7 +385,11 @@
                                     <button
                                         key={cat}
                                         onClick={() => setSelectedCategory(cat)}
-                                        className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide transition-colors ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                                        className={`px-2.5 py-1 rounded-full text-[10px] 
+                                            font-semibold uppercase tracking-wide 
+                                            transition-colors border ${selectedCategory === cat ? 
+                                            'bg-blue-600 text-white border-blue-600 shadow-sm' : 
+                                            'bg-blue-50 text-blue-800 border-blue-100 hover:bg-blue-100'}`}
                                     >
                                         {cat}
                                     </button>
@@ -322,21 +398,34 @@
                         </div>
 
                         {/* Grid */}
-                        <div className="h-[300px] overflow-y-auto pr-2 custom-scrollbar pb-10">
+                        <div className="h-[300px] overflow-y-auto pr-2 custom-scrollbar pb-6">
                             {filteredSymbols.length === 0 ? (
-                                <div className="text-center py-10 text-slate-500">No symbols found.</div>
+                                <div className="text-center py-10 text-stone-500">No symbols found.</div>
                             ) : (
-                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2">
-                                    {filteredSymbols.map((symbol) => (
-                                        <button
-                                            key={symbol.id}
-                                            onClick={() => handleInsert(symbol.copy || symbol.command)}
-                                            className="group flex items-center justify-center bg-slate-700 border border-slate-600 rounded p-2 h-12 hover:bg-slate-600 hover:border-blue-500 transition-all"
-                                            title={symbol.command}
-                                        >
-                                            <LatexRenderer latex={symbol.command} className="text-sm text-slate-200 pointer-events-none" />
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-12 sm:
+                                grid-cols-16 md:grid-cols-20 lg:grid-cols-26 gap-[0.5rem]">
+                                    {filteredSymbols.map((symbol) => {
+                                        const compactStyle = symbol.category === 'Matrices'
+                                            ? { maxWidth: '72px', overflow: 'hidden', fontSize: '10px', lineHeight: '1', transform: 'translateY(1px)' }
+                                            : { lineHeight: '1', transform: 'translateY(1px)' };
+                                        return (
+                                            <button
+                                                key={symbol.id}
+                                                onClick={() => handleInsert(symbol.copy || symbol.command)}
+                                                className="group flex items-center justify-center bg-blue-50 
+                                                border border-blue-200 rounded px-1 py-[2px] h-9 hover:
+                                                bg-blue-100 transition-all overflow-hidden"
+                                                title={symbol.command}
+                                            >
+                                                <LatexRenderer
+                                                    latex={symbol.command}
+                                                    className="text-[10px] text-blue-800 pointer-events-none"
+                                                    displayMode={false}
+                                                    style={compactStyle}
+                                                />
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -349,6 +438,7 @@
         const TextTools = ({ showToast }) => {
             const [text, setText] = useState('');
             const [stats, setStats] = useState({ words: 0, chars: 0, sentences: 0, paragraphs: 0 });
+            const textAreaRef = useRef(null);
 
             useEffect(() => {
                 const charCount = text.length;
@@ -432,46 +522,82 @@
                 showToast("Removed citations");
             }
 
-            const smartDashes = () => {
-                if (!text) return;
-                // 1. Spaced hyphens to em-dash: "word - word" -> "word — word"
-                // 2. Number ranges to en-dash: "1990-2000" -> "1990–2000"
-                let newText = text
-                    .replace(/\s+-\s+/g, ' — ')
-                    .replace(/(\d)\s*-\s*(\d)/g, '$1–$2');
-                setText(newText);
-                showToast("Converted to smart dashes");
-            }
-
-            const sortLines = () => {
-                if (!text) return;
-                const newText = text.split('\n').filter(line => line.trim()).sort((a, b) => a.localeCompare(b)).join('\n');
-                setText(newText);
-                showToast("Sorted lines alphabetically");
-            }
-
-            const escapeLatex = () => {
-                if (!text) return;
+            const convertToLatex = () => {
+                if (!text) return '';
                 const escapes = {
-                    '\\': '\\textbackslash ', '&': '\\&', '%': '\\%', '$': '\\$', '#': '\\#',
-                    '_': '\\_', '{': '\\{', '}': '\\}', '~': '\\textasciitilde ', '^': '\\textasciicircum '
+                    '\\': '\\textbackslash ',
+                    '&': '\\&',
+                    '%': '\\%',
+                    '$': '\\$',
+                    '#': '\\#',
+                    '_': '\\_',
+                    '{': '\\{',
+                    '}': '\\}',
+                    '~': '\\textasciitilde ',
+                    '^': '\\textasciicircum '
                 };
                 let newText = text.replace(/[\\&%\$#_{}~^]/g, match => escapes[match]);
+                // convert newlines to LaTeX line breaks for readability
+                newText = newText.replace(/\n{2,}/g, '\n\n').replace(/\n/g, '\\\\\n');
                 setText(newText);
-                showToast("Escaped for LaTeX");
+                showToast("Converted to LaTeX-safe text");
+                return newText;
             };
+
+            const preparePreview = (src) => {
+                if (!src || !src.trim()) return '';
+                const trimmed = src.trim();
+                // If it already has LaTeX commands or math delimiters, render as-is.
+                if (/[\\$]/.test(trimmed)) return trimmed;
+                // Otherwise wrap in \text{} and escape braces/backslashes.
+                const escaped = trimmed.replace(/([\\{}])/g, '\\$1');
+                return `\\text{${escaped}}`;
+            };
+
+            const wrapSelection = (prefix, suffix, placeholder = 'text') => {
+                const area = textAreaRef.current;
+                if (!area) {
+                    const inserted = `${prefix}${placeholder}${suffix}`;
+                    setText(text + inserted);
+                    return;
+                }
+                const start = area.selectionStart ?? 0;
+                const end = area.selectionEnd ?? 0;
+                const selected = text.slice(start, end) || placeholder;
+                const newValue = text.slice(0, start) + prefix + selected + suffix + text.slice(end);
+                setText(newValue);
+                const newStart = start + prefix.length;
+                const newEnd = newStart + selected.length;
+                requestAnimationFrame(() => {
+                    area.focus();
+                    area.setSelectionRange(newStart, newEnd);
+                });
+            };
+
+            const colorChoices = ['red', 'blue', 'magenta', 'gray'];
+            const insertSection = (level) => {
+                const base = level === 'section' ? 'Section Title' : level === 'subsection' ? 'Subsection Title' : 'Paragraph Title';
+                const labelBase = level === 'section' ? 'sec' : level === 'subsection' ? 'subsec' : 'para';
+                const safe = base.replace(/\s+/g, '_').toLowerCase();
+                const snippet = `\\${level}{${base}}\\label{${labelBase}:${safe}}`;
+                wrapSelection(`\\${level}{`, `}\\label{${labelBase}:${safe}}`, base);
+                showToast(`Inserted ${level}`);
+            };
+            const [latexPreview, setLatexPreview] = useState('');
 
             return (
                 <div className="flex flex-col h-full gap-4">
                     <div className="flex flex-col flex-1 relative">
                         <textarea
+                            ref={textAreaRef}
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                             placeholder="Paste your academic text or abstract here..."
-                            className="flex-1 w-full bg-slate-800 text-slate-100 font-serif text-lg p-4 rounded-lg border border-slate-700 resize-none placeholder-slate-500 focus:border-teal-500 transition-colors leading-relaxed"
+                            className="flex-1 w-full bg-white text-stone-900 text-lg p-4 rounded-lg border border-stone-300 shadow-inner resize-none placeholder-stone-400 focus:border-blue-500 transition-colors leading-relaxed min-h-[360px]"
+                            style={{ fontFamily: 'Literata, serif' }}
                             spellCheck="true"
                         />
-                        <div className="absolute bottom-2 right-2 flex gap-4 text-xs text-slate-500 bg-slate-800/80 px-3 py-1 rounded-full backdrop-blur-sm border border-slate-700">
+                        <div className="absolute bottom-2 right-2 flex gap-4 text-xs text-stone-500 bg-blue-50/90 px-3 py-1 rounded-full backdrop-blur-sm border border-blue-200 shadow-sm">
                             <span>{stats.words} Words</span>
                             <span>{stats.chars} Chars</span>
                             <span>{stats.sentences} Sentences</span>
@@ -479,33 +605,77 @@
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Case & Format</label>
+                    <div className="grid grid-cols-1 gap-4">
+                        <div className="bg-white p-3 rounded-lg border border-stone-200 shadow-sm">
+                            <label className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 block">Case & Format</label>
                             <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => transform('title_apa')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Title Case (APA)</button>
-                                <button onClick={() => transform('sentence')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Sentence Case</button>
-                                <button onClick={() => transform('upper')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">UPPERCASE</button>
-                                <button onClick={() => transform('lower')} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">lowercase</button>
+                                <button onClick={() => transform('title_apa')} className="bg-blue-100 hover:bg-blue-200 px-3 py-2 rounded text-sm text-blue-800 border border-blue-200">Title Case (APA)</button>
+                                <button onClick={() => transform('sentence')} className="bg-blue-100 hover:bg-blue-200 px-3 py-2 rounded text-sm text-blue-800 border border-blue-200">Sentence Case</button>
+                                <button onClick={() => transform('upper')} className="bg-blue-100 hover:bg-blue-200 px-3 py-2 rounded text-sm text-blue-800 border border-blue-200">UPPERCASE</button>
+                                <button onClick={() => transform('lower')} className="bg-blue-100 hover:bg-blue-200 px-3 py-2 rounded text-sm text-blue-800 border border-blue-200">lowercase</button>
                             </div>
                         </div>
-                        <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
-                            <label className="text-xs font-bold text-teal-500 uppercase tracking-wider mb-2 block">Academic Tools</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button onClick={formalize} className="bg-teal-900/30 hover:bg-teal-900/50 border border-teal-900 text-teal-300 px-3 py-2 rounded text-sm">Formalize Tone</button>
-                                <button onClick={cleanSpacing} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Clean Spacing</button>
-                                <button onClick={escapeLatex} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Latex Escape</button>
-                                <button onClick={stripCitations} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200">Remove Citations</button>
-                                <button onClick={fixBrokenLines} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200" title="Merges lines cut by PDF formatting">Fix PDF Breaks</button>
-                                <button onClick={smartDashes} className="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200" title="Converts hyphens to en/em dashes">Smart Dashes</button>
-                                <button onClick={sortLines} className="col-span-2 bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded text-sm text-slate-200 border border-slate-600 border-dashed">Sort Lines (A-Z)</button>
+                        <div className="bg-white p-3 rounded-lg border border-stone-200 shadow-sm">
+                            <label className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2 block">LaTeX Formatting</label>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                <button onClick={() => wrapSelection('\\textbf{', '}')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200 font-semibold">Bold</button>
+                                <button onClick={() => wrapSelection('\\textit{', '}')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200 italic">Italic</button>
+                                <button onClick={() => wrapSelection('\\texttt{', '}')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200">Monospace</button>
+                                <button onClick={() => wrapSelection('$', '$', 'a+b')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200">Inline Math</button>
+                                <button onClick={() => wrapSelection('$$\n', '\n$$', 'E=mc^2')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200">Display Math</button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {colorChoices.map((c) => (
+                                    <button
+                                        key={c}
+                                        onClick={() => wrapSelection(`\\textcolor{${c}}{`, '}', 'text')}
+                                        className="px-3 py-1.5 rounded text-sm border border-blue-200 text-blue-800 bg-blue-50 hover:bg-blue-100"
+                                    >
+                                        Color: {capitalize(c)}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                <button onClick={() => insertSection('section')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200">Section + Label</button>
+                                <button onClick={() => insertSection('subsection')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200">Subsection + Label</button>
+                                <button onClick={() => insertSection('paragraph')} className="bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded text-sm text-blue-800 border border-blue-200">Paragraph + Label</button>
+                            </div>
+                            <div className="mt-3">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => {
+                                            const converted = convertToLatex();
+                                            if (converted) setLatexPreview(converted);
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+                                    >
+                                        Convert Text to LaTeX Mode
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const previewable = preparePreview(text);
+                                            if (previewable) setLatexPreview(previewable);
+                                        }}
+                                        className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium border border-blue-200"
+                                    >
+                                        Preview LaTeX
+                                    </button>
+                                </div>
+                                {latexPreview.trim() && (
+                                    <div className="mt-3 p-3 border border-blue-200 rounded-lg bg-blue-50">
+                                        <p className="text-xs uppercase font-bold text-blue-800 mb-2">LaTeX Preview</p>
+                                        <div className="p-3 rounded bg-white border border-blue-100">
+                                            <LatexRenderer latex={latexPreview} displayMode={false} />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center border-t border-slate-700 pt-4">
-                        <button onClick={() => setText('')} className="text-red-400 hover:text-red-300 text-sm font-medium px-2">Clear All</button>
-                        <button onClick={() => copyToClipboard(text, showToast)} className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded-lg font-medium transition-colors">Copy Result</button>
+                    <div className="flex justify-between items-center border-t border-stone-200 pt-4">
+                        <button onClick={() => setText('')} className="text-rose-600 hover:text-rose-500 text-sm font-medium px-2">Clear All</button>
+                        <button onClick={() => copyToClipboard(text, showToast)} className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">Copy Result</button>
                     </div>
                 </div>
             );
@@ -513,8 +683,32 @@
 
         // --- MAIN APP ---
         function App() {
-            const [activeTab, setActiveTab] = useState('equation');
+            const validTabs = ['equation', 'text'];
+            const getTabFromHash = () => {
+                const hash = (window.location.hash || '').replace('#', '');
+                return validTabs.includes(hash) ? hash : 'equation';
+            };
+
+            const [activeTab, setActiveTab] = useState(() => getTabFromHash());
             const [toastMsg, setToastMsg] = useState(null);
+
+            useEffect(() => {
+                const syncFromHash = () => {
+                    const hashTab = getTabFromHash();
+                    setActiveTab((prev) => (hashTab !== prev ? hashTab : prev));
+                };
+                // Ensure deep-linked tabs like #algorithm show immediately
+                syncFromHash();
+                window.addEventListener('hashchange', syncFromHash);
+                return () => window.removeEventListener('hashchange', syncFromHash);
+            }, []);
+
+            useEffect(() => {
+                const nextHash = `#${activeTab}`;
+                if (window.location.hash !== nextHash) {
+                    history.replaceState(null, '', nextHash);
+                }
+            }, [activeTab]);
 
             const showToast = (msg) => {
                 setToastMsg(msg);
@@ -522,37 +716,43 @@
             };
 
             return (
-                <div className="min-h-screen flex flex-col font-sans selection:bg-blue-500/30">
-                    <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+                <div className="min-h-screen flex flex-col font-sans selection:bg-blue-200/50">
+                    <header className="bg-white/85 backdrop-blur border-b border-stone-200 sticky top-0 z-50 shadow-sm">
                         <div className="max-w-6xl mx-auto px-4">
                             <div className="flex items-center justify-between h-16">
-                                <span className="text-2xl font-serif italic font-bold bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent">
-                                    Academic Suite
+                                <span className="text-2xl font-semibold text-blue-800 tracking-tight" style={{ fontFamily: 'Literata, serif' }}>
+                                    LaTeX Tools
                                 </span>
-                                <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
-                                    <button
-                                        onClick={() => setActiveTab('equation')}
-                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'equation' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                                <div className="flex items-center gap-3">
+                                    <a
+                                        href="../index.html"
+                                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-stone-300 text-sm text-stone-800 bg-white hover:bg-blue-50 transition shadow-sm"
                                     >
-                                        Equation Editor
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab('text')}
-                                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'text' ? 'bg-teal-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
-                                    >
-                                        Text Tools
-                                    </button>
+                                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+                                        Home
+                                    </a>
+                                    <div className="flex bg-blue-50 rounded-lg p-1 border border-blue-200 shadow-inner flex-wrap gap-1">
+                                        <button
+                                            onClick={() => setActiveTab('equation')}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'equation' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-800 hover:bg-blue-100'}`}
+                                        >
+                                            Equation Editor
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('text')}
+                                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === 'text' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-800 hover:bg-blue-100'}`}
+                                        >
+                                            Text Tools
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </header>
 
                     <main className="flex-1 max-w-6xl mx-auto w-full p-4 md:p-6 overflow-hidden flex flex-col">
-                        {activeTab === 'equation' ? (
-                            <EquationEditor showToast={showToast} />
-                        ) : (
-                            <TextTools showToast={showToast} />
-                        )}
+                        {activeTab === 'equation' && <EquationEditor showToast={showToast} />}
+                        {activeTab === 'text' && <TextTools showToast={showToast} />}
                     </main>
 
                     <Toast message={toastMsg} />
